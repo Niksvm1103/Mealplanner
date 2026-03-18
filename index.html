@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Mahlzeitplaner</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Manrope:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <nav class="quick-nav quick-nav-fixed" aria-label="Schnellnavigation">
+      <div class="quick-nav-inner">
+        <a class="quick-nav-link" href="#week">Wochenplan</a>
+        <a class="quick-nav-link" href="#shopping">Einkaufsliste</a>
+        <a class="quick-nav-link" href="#cookbook">Kochbuch</a>
+        <a class="quick-nav-link" href="#ai-generator">KI</a>
+      </div>
+    </nav>
+    <div class="page-shell">
+      <header class="hero">
+        <div class="hero-copy">
+          <p class="eyebrow">Wochenplanung fuer Zuhause</p>
+          <h1>Willkommen Niklas, was moechtest du diese Woche kochen?</h1>
+          <p id="version-counter" class="hero-text"></p>
+          <div class="hero-actions">
+            <a class="button primary" href="#week">Zur aktuellen Woche</a>
+            <a class="button secondary" href="#cookbook">Kochbuch ansehen</a>
+          </div>
+        </div>
+      </header>
+
+      <main id="app">
+        <section id="week" class="panel">
+          <div class="section-heading">
+            <div>
+              <p class="section-kicker">Diese Woche</p>
+              <h2>Wochenplan</h2>
+              <p id="week-range" class="week-range"></p>
+            </div>
+            <div class="section-actions">
+              <p class="section-text">
+                Sieben Tage, direkt mit den passenden Rezeptdetails verlinkt und flexibel anpassbar.
+              </p>
+              <label class="search-field week-picker-field">
+                <span>Woche</span>
+                <select id="week-select"></select>
+              </label>
+              <button id="print-week-button" class="button secondary" type="button">
+                Druckansicht
+              </button>
+              <button id="open-recipe-form" class="button primary" type="button">
+                Eigenes Rezept anlegen
+              </button>
+            </div>
+          </div>
+          <div id="week-grid" class="week-grid"></div>
+        </section>
+
+        <section id="print-week-view" class="print-week-view" aria-hidden="true">
+          <div class="print-week-header">
+            <h1>Wochenplan</h1>
+            <p id="print-week-range"></p>
+          </div>
+          <table class="print-week-table">
+            <thead>
+              <tr id="print-week-headings"></tr>
+            </thead>
+            <tbody id="print-week-body"></tbody>
+          </table>
+        </section>
+
+        <section id="recipe-form-panel" class="panel hidden">
+          <div class="section-heading detail-heading">
+            <div>
+              <p class="section-kicker">Eigenes Rezept</p>
+              <h2>Neues Rezept anlegen</h2>
+            </div>
+            <button id="close-recipe-form" class="button secondary" type="button">
+              Schliessen
+            </button>
+          </div>
+          <form id="recipe-form" class="recipe-form">
+            <div class="recipe-form-top">
+              <label>
+                <span>Titel</span>
+                <input id="recipe-title" name="title" type="text" required />
+              </label>
+              <label>
+                <span>Kategorie</span>
+                <input id="recipe-category" name="category" type="text" placeholder="z. B. Vegetarisch" required />
+              </label>
+              <label>
+                <span>Zeit</span>
+                <input id="recipe-time" name="time" type="text" inputmode="numeric" placeholder="z. B. 30" required />
+              </label>
+              <label>
+                <span>Portionen</span>
+                <input id="recipe-servings" name="servings" type="text" inputmode="numeric" placeholder="z. B. 2" required />
+              </label>
+              <label class="form-span-2">
+                <span>Beschreibung</span>
+                <input
+                  id="recipe-description"
+                  name="description"
+                  type="text"
+                  placeholder="Kurzer Satz fuer Wochenplan und Kochbuch"
+                  required
+                />
+              </label>
+              <label class="form-span-2">
+                <span>Bild-URL fuer Kochbuch (optional)</span>
+                <input
+                  id="recipe-image"
+                  name="image"
+                  type="url"
+                  placeholder="z. B. https://images.example.com/pasta.jpg"
+                />
+              </label>
+            </div>
+
+            <div class="recipe-form-top nutrition-form">
+              <label>
+                <span>kcal</span>
+                <input id="recipe-kcal" name="kcal" type="text" inputmode="numeric" placeholder="z. B. 520" required />
+              </label>
+              <label>
+                <span>F</span>
+                <input id="recipe-fat" name="fat" type="text" inputmode="numeric" placeholder="z. B. 18" required />
+              </label>
+              <label>
+                <span>KH</span>
+                <input id="recipe-carbs" name="carbs" type="text" inputmode="numeric" placeholder="z. B. 45" required />
+              </label>
+              <label>
+                <span>P</span>
+                <input id="recipe-protein" name="protein" type="text" inputmode="numeric" placeholder="z. B. 30" required />
+              </label>
+            </div>
+
+            <div class="recipe-form-layout">
+              <label class="form-column">
+                <span>Zubereitung links</span>
+                <textarea
+                  id="recipe-steps"
+                  name="steps"
+                  rows="10"
+                  placeholder="Ein Schritt pro Zeile"
+                  required
+                ></textarea>
+              </label>
+              <label class="form-column">
+                <span>Zutaten rechts</span>
+                <textarea
+                  id="recipe-ingredients"
+                  name="ingredients"
+                  rows="10"
+                  placeholder="Eine Zutat pro Zeile, optional mit Kategorie in eckigen Klammern.&#10;Beispiel: [Gemuese] 1 Paprika"
+                  required
+                ></textarea>
+              </label>
+            </div>
+
+            <label class="checkbox-field">
+              <input id="recipe-mealprep" name="mealprep" type="checkbox" />
+              <span>Mealprep tauglich</span>
+            </label>
+
+            <div class="recipe-form-footer">
+              <label>
+                <span>Direkt in diesen Slot einplanen</span>
+                <select id="recipe-slot-select" name="slotSelect">
+                  <option value="">Nur ins Kochbuch speichern</option>
+                </select>
+              </label>
+              <button id="recipe-submit-button" class="button primary" type="submit">Rezept speichern</button>
+            </div>
+          </form>
+        </section>
+
+        <section id="recipe-detail" class="panel hidden">
+          <div class="section-heading detail-heading">
+            <div>
+              <p class="section-kicker">Rezept</p>
+              <h2 id="detail-title"></h2>
+            </div>
+            <div class="detail-actions">
+              <button id="edit-recipe-button" class="button secondary" type="button">
+                Rezept bearbeiten
+              </button>
+              <button id="delete-recipe-button" class="button ghost" type="button">
+                Rezept loeschen
+              </button>
+              <button id="back-button" class="button secondary" type="button">
+                Zurueck zur Woche
+              </button>
+            </div>
+          </div>
+          <div class="detail-layout">
+            <article class="detail-main">
+              <div class="detail-meta">
+                <span id="detail-tag"></span>
+                <span id="detail-time"></span>
+                <span id="detail-servings"></span>
+              </div>
+              <p id="detail-description" class="detail-description"></p>
+              <div id="detail-nutrition" class="nutrition-grid"></div>
+              <h3>Zubereitung</h3>
+              <ol id="detail-steps" class="step-list"></ol>
+            </article>
+            <aside class="detail-sidebar">
+              <h3>Zutaten</h3>
+              <ul id="detail-ingredients" class="ingredient-list"></ul>
+              <div class="recipe-form-footer slot-picker">
+                <label>
+                  <span>In Wochenplan einfuegen</span>
+                  <select id="detail-slot-select">
+                    <option value="">Slot waehlen</option>
+                  </select>
+                </label>
+                <button id="detail-add-to-week" class="button primary" type="button">
+                  Einplanen
+                </button>
+              </div>
+            </aside>
+          </div>
+        </section>
+
+        <section id="shopping" class="panel">
+          <div class="section-heading">
+            <div>
+              <p class="section-kicker">Fuer den Einkauf</p>
+              <h2>Einkaufsliste</h2>
+            </div>
+            <p class="section-text">
+              Kombiniert automatisch die Zutaten aus dem aktuellen Wochenplan.
+            </p>
+          </div>
+          <div id="shopping-day-filters" class="shopping-day-filters"></div>
+          <div class="shopping-layout">
+            <div class="shopping-card">
+              <div class="shopping-actions">
+                <button id="copy-button" class="button primary" type="button">
+                  Liste kopieren
+                </button>
+                <span id="copy-feedback" class="copy-feedback" aria-live="polite"></span>
+              </div>
+              <pre id="shopping-output" class="shopping-output"></pre>
+            </div>
+          </div>
+        </section>
+
+        <section id="cookbook" class="panel">
+          <div class="section-heading">
+            <div>
+              <p class="section-kicker">Kochbuch</p>
+              <h2>Alle Rezeptideen</h2>
+              <p class="section-text archive-text">
+                Filtere nach Kategorien und finde passende Rezepte fuer neue Wochen.
+              </p>
+            </div>
+            <div class="cookbook-controls">
+              <label class="search-field">
+                <span>Suche</span>
+                <input id="cookbook-search" type="search" placeholder="z. B. Fisch, Bowl, Suppe" />
+              </label>
+              <label class="search-field">
+                <span>Kategorie</span>
+                <select id="cookbook-category">
+                  <option value="Alle">Alle Kategorien</option>
+                </select>
+              </label>
+              <label class="search-field">
+                <span>Sortieren</span>
+                <select id="cookbook-sort">
+                  <option value="title-asc">A-Z aufsteigend</option>
+                  <option value="title-desc">A-Z absteigend</option>
+                  <option value="time-asc">Kochzeit aufsteigend</option>
+                  <option value="time-desc">Kochzeit absteigend</option>
+                </select>
+              </label>
+              <label class="checkbox-field cookbook-checkbox">
+                <input id="cookbook-mealprep-only" type="checkbox" />
+                <span>Nur Mealprep tauglich</span>
+              </label>
+            </div>
+          </div>
+          <div id="cookbook-grid" class="archive-grid"></div>
+        </section>
+
+        <section id="ai-generator" class="panel">
+          <div class="section-heading">
+            <div>
+              <p class="section-kicker">KI-Kueche</p>
+              <h2>Rezept mit KI generieren</h2>
+              <p class="section-text archive-text">
+                Beschreibe kurz, worauf du Lust hast. Danach kannst du neue Varianten generieren und das beste Rezept ins Kochbuch uebernehmen.
+              </p>
+            </div>
+          </div>
+          <form id="ai-form" class="recipe-form">
+            <div class="recipe-form-top ai-form-grid">
+              <label class="form-span-2">
+                <span>Vorgaben</span>
+                <textarea
+                  id="ai-prompt"
+                  name="prompt"
+                  rows="5"
+                  placeholder="z. B. Vegetarisch, maximal 30 Minuten, viel Protein, mit Reis und Brokkoli"
+                  required
+                ></textarea>
+              </label>
+              <label>
+                <span>Portionen</span>
+                <input id="ai-servings" name="servings" type="text" placeholder="z. B. 2 Personen" value="2 Personen" />
+              </label>
+              <label>
+                <span>Stil oder Extra-Wunsch</span>
+                <input id="ai-style" name="style" type="text" placeholder="z. B. mediterran, guenstig, meal prep" />
+              </label>
+            </div>
+            <div class="recipe-form-footer">
+              <p id="ai-status" class="section-text status-text"></p>
+              <div class="hero-actions compact-actions">
+                <button id="ai-generate-button" class="button primary" type="submit">Rezept generieren</button>
+                <button id="ai-regenerate-button" class="button secondary" type="button" disabled>
+                  Neu generieren
+                </button>
+              </div>
+            </div>
+          </form>
+
+          <div id="ai-result" class="detail-layout hidden">
+            <article class="detail-main">
+              <div class="detail-meta">
+                <span id="ai-result-tag"></span>
+                <span id="ai-result-time"></span>
+                <span id="ai-result-servings"></span>
+              </div>
+              <h3 id="ai-result-title"></h3>
+              <p id="ai-result-description" class="detail-description"></p>
+              <div id="ai-result-nutrition" class="nutrition-grid"></div>
+              <h3>Zubereitung</h3>
+              <ol id="ai-result-steps" class="step-list"></ol>
+              <div class="archive-actions">
+                <button id="save-ai-recipe" class="button primary" type="button" disabled>
+                  Ins Kochbuch uebernehmen
+                </button>
+              </div>
+            </article>
+            <aside class="detail-sidebar">
+              <h3>Zutaten</h3>
+              <ul id="ai-result-ingredients" class="ingredient-list"></ul>
+            </aside>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <div id="planner-modal" class="modal-overlay hidden" aria-hidden="true">
+      <div class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="planner-modal-title">
+        <div class="section-heading detail-heading modal-heading">
+          <div>
+            <p class="section-kicker">Kochbuch</p>
+            <h2 id="planner-modal-title">Rezept einplanen</h2>
+            <p id="planner-modal-subtitle" class="section-text archive-text"></p>
+          </div>
+          <button id="planner-modal-close" class="button secondary" type="button">Schliessen</button>
+        </div>
+        <label class="search-field modal-search-field">
+          <span>Suche</span>
+          <input id="planner-modal-search" type="search" placeholder="z. B. Pasta, Curry, Bowl" />
+        </label>
+        <div class="cookbook-controls modal-controls">
+          <label class="search-field">
+            <span>Kategorie</span>
+            <select id="planner-modal-category">
+              <option value="Alle">Alle Kategorien</option>
+            </select>
+          </label>
+          <label class="search-field">
+            <span>Sortieren</span>
+            <select id="planner-modal-sort">
+              <option value="title-asc">A-Z aufsteigend</option>
+              <option value="title-desc">A-Z absteigend</option>
+              <option value="time-asc">Kochzeit aufsteigend</option>
+              <option value="time-desc">Kochzeit absteigend</option>
+            </select>
+          </label>
+          <label class="checkbox-field cookbook-checkbox">
+            <input id="planner-modal-mealprep-only" type="checkbox" />
+            <span>Nur Mealprep tauglich</span>
+          </label>
+        </div>
+        <div id="planner-modal-list" class="modal-recipe-list"></div>
+      </div>
+    </div>
+
+    <script src="./app.js"></script>
+  </body>
+</html>
