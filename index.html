@@ -24,8 +24,8 @@
     <div class="page-shell">
       <header class="hero">
         <div class="hero-copy">
-          <p class="eyebrow">Wochenplanung fuer Zuhause</p>
-          <h1>Willkommen Niklas, was moechtest du diese Woche kochen?</h1>
+          <p class="eyebrow">Wochenplanung für Zuhause</p>
+          <h1>Willkommen Niklas, was möchtest du diese Woche kochen?</h1>
           <p id="version-counter" class="hero-text"></p>
           <div class="hero-actions">
             <a class="button primary" href="#week">Zur aktuellen Woche</a>
@@ -37,17 +37,14 @@
       <main id="app">
         <section id="week" class="panel">
           <div class="section-heading">
-            <div>
+            <div class="week-heading-copy">
               <p class="section-kicker">Diese Woche</p>
               <h2>Wochenplan</h2>
               <p id="week-range" class="week-range"></p>
             </div>
-            <div class="section-actions">
-              <p class="section-text">
-                Sieben Tage, direkt mit den passenden Rezeptdetails verlinkt und flexibel anpassbar.
-              </p>
-              <label class="search-field week-picker-field">
-                <span>Woche</span>
+            <div class="section-actions week-actions">
+              <label class="search-field week-picker-field week-picker-inline">
+                <span>Zeitraum</span>
                 <select id="week-select"></select>
               </label>
               <button id="print-week-button" class="button secondary" type="button">
@@ -58,6 +55,9 @@
               </button>
             </div>
           </div>
+          <p class="section-text week-intro">
+            Sieben Tage, direkt mit den passenden Rezeptdetails verlinkt und flexibel anpassbar.
+          </p>
           <div id="week-grid" class="week-grid"></div>
         </section>
 
@@ -74,6 +74,14 @@
           </table>
         </section>
 
+        <section id="print-shopping-view" class="print-week-view print-shopping-view" aria-hidden="true">
+          <div class="print-week-header">
+            <h1>Einkaufsliste</h1>
+            <p id="print-shopping-range"></p>
+          </div>
+          <div id="print-shopping-body" class="print-shopping-body"></div>
+        </section>
+
         <section id="recipe-form-panel" class="panel hidden">
           <div class="section-heading detail-heading">
             <div>
@@ -81,7 +89,7 @@
               <h2>Neues Rezept anlegen</h2>
             </div>
             <button id="close-recipe-form" class="button secondary" type="button">
-              Schliessen
+              Schließen
             </button>
           </div>
           <form id="recipe-form" class="recipe-form">
@@ -103,17 +111,7 @@
                 <input id="recipe-servings" name="servings" type="text" inputmode="numeric" placeholder="z. B. 2" required />
               </label>
               <label class="form-span-2">
-                <span>Beschreibung</span>
-                <input
-                  id="recipe-description"
-                  name="description"
-                  type="text"
-                  placeholder="Kurzer Satz fuer Wochenplan und Kochbuch"
-                  required
-                />
-              </label>
-              <label class="form-span-2">
-                <span>Bild-URL fuer Kochbuch (optional)</span>
+                <span>Bild-URL für Kochbuch (optional)</span>
                 <input
                   id="recipe-image"
                   name="image"
@@ -159,7 +157,7 @@
                   id="recipe-ingredients"
                   name="ingredients"
                   rows="10"
-                  placeholder="Eine Zutat pro Zeile, optional mit Kategorie in eckigen Klammern.&#10;Beispiel: [Gemuese] 1 Paprika"
+                  placeholder="Eine Zutat pro Zeile, optional mit Kategorie in eckigen Klammern.&#10;Beispiel: [Gemüse] 1 Paprika"
                   required
                 ></textarea>
               </label>
@@ -193,10 +191,10 @@
                 Rezept bearbeiten
               </button>
               <button id="delete-recipe-button" class="button ghost" type="button">
-                Rezept loeschen
+                Rezept löschen
               </button>
               <button id="back-button" class="button secondary" type="button">
-                Zurueck zur Woche
+                Zurück zur Woche
               </button>
             </div>
           </div>
@@ -207,7 +205,6 @@
                 <span id="detail-time"></span>
                 <span id="detail-servings"></span>
               </div>
-              <p id="detail-description" class="detail-description"></p>
               <div id="detail-nutrition" class="nutrition-grid"></div>
               <h3>Zubereitung</h3>
               <ol id="detail-steps" class="step-list"></ol>
@@ -217,9 +214,9 @@
               <ul id="detail-ingredients" class="ingredient-list"></ul>
               <div class="recipe-form-footer slot-picker">
                 <label>
-                  <span>In Wochenplan einfuegen</span>
+                  <span>In Wochenplan einfügen</span>
                   <select id="detail-slot-select">
-                    <option value="">Slot waehlen</option>
+                    <option value="">Slot wählen</option>
                   </select>
                 </label>
                 <button id="detail-add-to-week" class="button primary" type="button">
@@ -231,21 +228,33 @@
         </section>
 
         <section id="shopping" class="panel">
-          <div class="section-heading">
-            <div>
-              <p class="section-kicker">Fuer den Einkauf</p>
+          <div class="section-heading shopping-heading">
+            <div class="shopping-heading-copy">
+              <p class="section-kicker">Für den Einkauf</p>
               <h2>Einkaufsliste</h2>
+              <p class="section-text shopping-intro">
+                Wähle Tage oder einzelne Mahlzeiten aus, um deine Einkaufsliste zu erstellen.
+              </p>
             </div>
-            <p class="section-text">
-              Kombiniert automatisch die Zutaten aus dem aktuellen Wochenplan.
-            </p>
+            <div class="shopping-toolbar">
+              <label class="search-field week-picker-field week-picker-inline shopping-week-picker">
+                <span>Einkaufswoche</span>
+                <select id="shopping-week-select"></select>
+              </label>
+              <button id="print-shopping-button" class="button secondary" type="button">
+                Drucken
+              </button>
+            </div>
           </div>
-          <div id="shopping-day-filters" class="shopping-day-filters"></div>
+          <div class="shopping-filters-panel">
+            <p class="shopping-filter-title">Mahlzeiten auswählen</p>
+            <div id="shopping-day-filters" class="shopping-day-filters"></div>
+          </div>
           <div class="shopping-layout">
             <div class="shopping-card">
               <div class="shopping-actions">
                 <button id="copy-button" class="button primary" type="button">
-                  Liste kopieren
+                  Exportieren
                 </button>
                 <span id="copy-feedback" class="copy-feedback" aria-live="polite"></span>
               </div>
@@ -260,7 +269,7 @@
               <p class="section-kicker">Kochbuch</p>
               <h2>Alle Rezeptideen</h2>
               <p class="section-text archive-text">
-                Filtere nach Kategorien und finde passende Rezepte fuer neue Wochen.
+                Filtere nach Kategorien und finde passende Rezepte für neue Wochen.
               </p>
             </div>
             <div class="cookbook-controls">
@@ -295,10 +304,10 @@
         <section id="ai-generator" class="panel">
           <div class="section-heading">
             <div>
-              <p class="section-kicker">KI-Kueche</p>
+              <p class="section-kicker">KI-Küche</p>
               <h2>Rezept mit KI generieren</h2>
               <p class="section-text archive-text">
-                Beschreibe kurz, worauf du Lust hast. Danach kannst du neue Varianten generieren und das beste Rezept ins Kochbuch uebernehmen.
+                Beschreibe kurz, worauf du Lust hast. Danach kannst du neue Varianten generieren und das beste Rezept ins Kochbuch übernehmen.
               </p>
             </div>
           </div>
@@ -320,7 +329,7 @@
               </label>
               <label>
                 <span>Stil oder Extra-Wunsch</span>
-                <input id="ai-style" name="style" type="text" placeholder="z. B. mediterran, guenstig, meal prep" />
+                <input id="ai-style" name="style" type="text" placeholder="z. B. mediterran, günstig, meal prep" />
               </label>
             </div>
             <div class="recipe-form-footer">
@@ -342,13 +351,12 @@
                 <span id="ai-result-servings"></span>
               </div>
               <h3 id="ai-result-title"></h3>
-              <p id="ai-result-description" class="detail-description"></p>
               <div id="ai-result-nutrition" class="nutrition-grid"></div>
               <h3>Zubereitung</h3>
               <ol id="ai-result-steps" class="step-list"></ol>
               <div class="archive-actions">
                 <button id="save-ai-recipe" class="button primary" type="button" disabled>
-                  Ins Kochbuch uebernehmen
+                  Ins Kochbuch übernehmen
                 </button>
               </div>
             </article>
@@ -369,7 +377,7 @@
             <h2 id="planner-modal-title">Rezept einplanen</h2>
             <p id="planner-modal-subtitle" class="section-text archive-text"></p>
           </div>
-          <button id="planner-modal-close" class="button secondary" type="button">Schliessen</button>
+          <button id="planner-modal-close" class="button secondary" type="button">Schließen</button>
         </div>
         <label class="search-field modal-search-field">
           <span>Suche</span>

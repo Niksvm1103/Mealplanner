@@ -1,5 +1,8 @@
-const storageKey = "mahlzeit-state-v2";
+const storageKey = "mahlzeit-state-v3";
+const legacyStorageKey = "mahlzeit-state-v2";
 const versionCounterKey = "mahlzeit-version-counter";
+const planningWindowDays = 7;
+const recipePickerDays = 7;
 const weekdayNames = [
   "Montag",
   "Dienstag",
@@ -10,7 +13,7 @@ const weekdayNames = [
   "Sonntag"
 ];
 const mealSlots = [
-  { key: "breakfast", label: "Fruehstueck" },
+  { key: "breakfast", label: "Frühstück" },
   { key: "lunch", label: "Mittagessen" },
   { key: "dinner", label: "Abendessen" }
 ];
@@ -18,26 +21,26 @@ const mealSlots = [
 const baseRecipes = [
   {
     id: "gnocchi-ofengemuese",
-    title: "Ofen-Gnocchi mit Gemuese",
+    title: "Ofen-Gnocchi mit Gemüse",
     category: "Vegetarisch",
     time: "30 Min",
     servings: "2 Personen",
     description: "Ein schnelles Blechgericht mit Gnocchi, Paprika, Zucchini und cremigem Feta.",
     ingredients: [
-      { item: "500 g Gnocchi", category: "Kuehlregal" },
-      { item: "1 rote Paprika", category: "Gemuese" },
-      { item: "1 Zucchini", category: "Gemuese" },
-      { item: "1 rote Zwiebel", category: "Gemuese" },
-      { item: "150 g Cherrytomaten", category: "Gemuese" },
+      { item: "500 g Gnocchi", category: "Kühlregal" },
+      { item: "1 rote Paprika", category: "Gemüse" },
+      { item: "1 Zucchini", category: "Gemüse" },
+      { item: "1 rote Zwiebel", category: "Gemüse" },
+      { item: "150 g Cherrytomaten", category: "Gemüse" },
       { item: "1 Block Feta", category: "Milchprodukte" },
-      { item: "2 EL Olivenoel", category: "Oele und Saucen" },
-      { item: "1 TL Oregano", category: "Gewuerze" },
-      { item: "Salz und Pfeffer", category: "Gewuerze" }
+      { item: "2 EL Olivenöl", category: "Öle und Saucen" },
+      { item: "1 TL Oregano", category: "Gewürze" },
+      { item: "Salz und Pfeffer", category: "Gewürze" }
     ],
     nutrition: { kcal: 640, fat: "25 g", carbs: "73 g", protein: "21 g" },
     steps: [
       "Backofen auf 200 Grad vorheizen.",
-      "Gemuese schneiden und mit Gnocchi, Oel und Gewuerzen auf ein Blech geben.",
+      "Gemüse schneiden und mit Gnocchi, Öl und Gewürzen auf ein Blech geben.",
       "Feta obenauf setzen und alles 25 Minuten backen.",
       "Vor dem Servieren kurz vermengen."
     ],
@@ -49,23 +52,23 @@ const baseRecipes = [
     category: "Vegan",
     time: "35 Min",
     servings: "4 Personen",
-    description: "Samtiges Curry mit roten Linsen, Spinat und Kokosmilch fuer entspannte Abende.",
+    description: "Samtiges Curry mit roten Linsen, Spinat und Kokosmilch für entspannte Abende.",
     ingredients: [
       { item: "250 g rote Linsen", category: "Trockenwaren" },
-      { item: "1 Zwiebel", category: "Gemuese" },
-      { item: "2 Knoblauchzehen", category: "Gemuese" },
-      { item: "1 Stueck Ingwer", category: "Gemuese" },
-      { item: "1 EL Currypaste", category: "Oele und Saucen" },
+      { item: "1 Zwiebel", category: "Gemüse" },
+      { item: "2 Knoblauchzehen", category: "Gemüse" },
+      { item: "1 Stück Ingwer", category: "Gemüse" },
+      { item: "1 EL Currypaste", category: "Öle und Saucen" },
       { item: "1 Dose Kokosmilch", category: "Konserven" },
-      { item: "400 ml Gemuesebruehe", category: "Konserven" },
-      { item: "150 g Blattspinat", category: "Gemuese" },
+      { item: "400 ml Gemüsebrühe", category: "Konserven" },
+      { item: "150 g Blattspinat", category: "Gemüse" },
       { item: "1 Limette", category: "Obst" }
     ],
     nutrition: { kcal: 510, fat: "22 g", carbs: "54 g", protein: "19 g" },
     steps: [
       "Zwiebel, Knoblauch und Ingwer anschwitzen.",
-      "Currypaste und Linsen kurz mitroesten.",
-      "Kokosmilch und Bruehe zugeben und 20 Minuten koecheln.",
+      "Currypaste und Linsen kurz mitrösten.",
+      "Kokosmilch und Brühe zugeben und 20 Minuten köcheln.",
       "Spinat unterheben und mit Limettensaft abschmecken."
     ],
     tags: ["Meal Prep", "One Pot"]
@@ -79,18 +82,18 @@ const baseRecipes = [
     description: "Ofenkartoffeln mit zartem Lachs und zitroniger Joghurt-Dill-Sauce.",
     ingredients: [
       { item: "2 Lachsfilets", category: "Fleisch und Fisch" },
-      { item: "500 g kleine Kartoffeln", category: "Gemuese" },
+      { item: "500 g kleine Kartoffeln", category: "Gemüse" },
       { item: "1 Zitrone", category: "Obst" },
       { item: "150 g Joghurt", category: "Milchprodukte" },
-      { item: "1 Bund Dill", category: "Gemuese" },
-      { item: "1 EL Olivenoel", category: "Oele und Saucen" },
-      { item: "Salz und Pfeffer", category: "Gewuerze" }
+      { item: "1 Bund Dill", category: "Gemüse" },
+      { item: "1 EL Olivenöl", category: "Öle und Saucen" },
+      { item: "Salz und Pfeffer", category: "Gewürze" }
     ],
     nutrition: { kcal: 590, fat: "28 g", carbs: "34 g", protein: "41 g" },
     steps: [
       "Kartoffeln vorkochen und auf dem Blech knusprig backen.",
-      "Lachs wuerzen, danebenlegen und 12 Minuten garen.",
-      "Joghurt mit Dill und Zitronensaft verruehren.",
+      "Lachs würzen, danebenlegen und 12 Minuten garen.",
+      "Joghurt mit Dill und Zitronensaft verrühren.",
       "Alles gemeinsam anrichten."
     ],
     tags: ["Ofen", "Proteinreich"]
@@ -101,20 +104,20 @@ const baseRecipes = [
     category: "Vegetarisch",
     time: "20 Min",
     servings: "2 Personen",
-    description: "Eine sehr schnelle Alltags-Pasta mit gruenem Pesto, Erbsen und Parmesan.",
+    description: "Eine sehr schnelle Alltags-Pasta mit grünem Pesto, Erbsen und Parmesan.",
     ingredients: [
       { item: "250 g Pasta", category: "Trockenwaren" },
-      { item: "3 EL gruenes Pesto", category: "Oele und Saucen" },
-      { item: "150 g TK-Erbsen", category: "Tiefkuehl" },
+      { item: "3 EL grünes Pesto", category: "Öle und Saucen" },
+      { item: "150 g TK-Erbsen", category: "Tiefkühl" },
       { item: "40 g Parmesan", category: "Milchprodukte" },
       { item: "1 Zitrone", category: "Obst" },
-      { item: "Salz und Pfeffer", category: "Gewuerze" }
+      { item: "Salz und Pfeffer", category: "Gewürze" }
     ],
     nutrition: { kcal: 560, fat: "18 g", carbs: "74 g", protein: "20 g" },
     steps: [
       "Pasta kochen und Erbsen in den letzten Minuten mitgaren.",
       "Mit Pesto, Nudelwasser und Zitronenabrieb vermengen.",
-      "Parmesan daruebergeben und servieren."
+      "Parmesan darübergeben und servieren."
     ],
     tags: ["Schnell", "Feierabend"]
   },
@@ -124,73 +127,73 @@ const baseRecipes = [
     category: "Vegetarisch",
     time: "25 Min",
     servings: "3 Personen",
-    description: "Knackige Tacos mit wuerziger Bohnenfuellung, Mais und cremiger Avocado.",
+    description: "Knackige Tacos mit würziger Bohnenfüllung, Mais und cremiger Avocado.",
     ingredients: [
       { item: "1 Packung Taco-Shells", category: "Trockenwaren" },
       { item: "1 Dose schwarze Bohnen", category: "Konserven" },
       { item: "1 Dose Mais", category: "Konserven" },
       { item: "1 Avocado", category: "Obst" },
-      { item: "1 Tomate", category: "Gemuese" },
-      { item: "1 rote Zwiebel", category: "Gemuese" },
-      { item: "1 TL Kreuzkuemmel", category: "Gewuerze" },
+      { item: "1 Tomate", category: "Gemüse" },
+      { item: "1 rote Zwiebel", category: "Gemüse" },
+      { item: "1 TL Kreuzkümmel", category: "Gewürze" },
       { item: "1 Limette", category: "Obst" }
     ],
     nutrition: { kcal: 520, fat: "21 g", carbs: "62 g", protein: "16 g" },
     steps: [
-      "Bohnen und Mais mit Gewuerzen in der Pfanne erhitzen.",
+      "Bohnen und Mais mit Gewürzen in der Pfanne erhitzen.",
       "Avocado, Tomate und Zwiebel fein schneiden.",
-      "Tacos fuellen und mit Limettensaft servieren."
+      "Tacos füllen und mit Limettensaft servieren."
     ],
     tags: ["Fingerfood", "Schnell"]
   },
   {
     id: "huhn-reis-bowl",
-    title: "Huehnchen-Reis-Bowl",
-    category: "Gefluegel",
+    title: "Hühnchen-Reis-Bowl",
+    category: "Geflügel",
     time: "35 Min",
     servings: "2 Personen",
-    description: "Saftiges Huehnchen auf Reis mit Gurke, Karotte und Sesam-Dressing.",
+    description: "Saftiges Hühnchen auf Reis mit Gurke, Karotte und Sesam-Dressing.",
     ingredients: [
-      { item: "2 Huehnchenbrustfilets", category: "Fleisch und Fisch" },
+      { item: "2 Hühnchenbrustfilets", category: "Fleisch und Fisch" },
       { item: "150 g Reis", category: "Trockenwaren" },
-      { item: "1 Gurke", category: "Gemuese" },
-      { item: "2 Karotten", category: "Gemuese" },
-      { item: "2 EL Sojasauce", category: "Oele und Saucen" },
-      { item: "1 EL Sesamoel", category: "Oele und Saucen" },
-      { item: "1 TL Honig", category: "Backen und Suesses" },
+      { item: "1 Gurke", category: "Gemüse" },
+      { item: "2 Karotten", category: "Gemüse" },
+      { item: "2 EL Sojasauce", category: "Öle und Saucen" },
+      { item: "1 EL Sesamöl", category: "Öle und Saucen" },
+      { item: "1 TL Honig", category: "Backen und Süßes" },
       { item: "1 EL Sesam", category: "Trockenwaren" }
     ],
     nutrition: { kcal: 610, fat: "19 g", carbs: "49 g", protein: "52 g" },
     steps: [
-      "Reis kochen und Huehnchen anbraten.",
-      "Gemuese fein hobeln.",
-      "Dressing aus Sojasauce, Sesamoel und Honig ruehren.",
+      "Reis kochen und Hühnchen anbraten.",
+      "Gemüse fein hobeln.",
+      "Dressing aus Sojasauce, Sesamöl und Honig rühren.",
       "Alles in Bowls anrichten und mit Sesam toppen."
     ],
     tags: ["Bowl", "Meal Prep"]
   },
   {
     id: "tomatensuppe-toast",
-    title: "Tomatensuppe mit Kaesetoast",
+    title: "Tomatensuppe mit Käsestoast",
     category: "Vegetarisch",
     time: "25 Min",
     servings: "2 Personen",
-    description: "Waermende Suppe mit knusprigem Kaesetoast fuer einen unkomplizierten Sonntag.",
+    description: "Wärmende Suppe mit knusprigem Käsestoast für einen unkomplizierten Sonntag.",
     ingredients: [
       { item: "1 Dose gehackte Tomaten", category: "Konserven" },
-      { item: "1 Zwiebel", category: "Gemuese" },
-      { item: "1 Knoblauchzehe", category: "Gemuese" },
-      { item: "300 ml Gemuesebruehe", category: "Konserven" },
+      { item: "1 Zwiebel", category: "Gemüse" },
+      { item: "1 Knoblauchzehe", category: "Gemüse" },
+      { item: "300 ml Gemüsebrühe", category: "Konserven" },
       { item: "2 Scheiben Sauerteigbrot", category: "Brot und Backwaren" },
-      { item: "80 g Kaese", category: "Milchprodukte" },
-      { item: "1 EL Olivenoel", category: "Oele und Saucen" },
-      { item: "Basilikum", category: "Gemuese" }
+      { item: "80 g Käse", category: "Milchprodukte" },
+      { item: "1 EL Olivenöl", category: "Öle und Saucen" },
+      { item: "Basilikum", category: "Gemüse" }
     ],
     nutrition: { kcal: 470, fat: "19 g", carbs: "45 g", protein: "19 g" },
     steps: [
-      "Zwiebel und Knoblauch anschwitzen, Tomaten und Bruehe zugeben.",
-      "Suppe 15 Minuten koecheln und fein mixen.",
-      "Brot mit Kaese ueberbacken und dazu servieren."
+      "Zwiebel und Knoblauch anschwitzen, Tomaten und Brühe zugeben.",
+      "Suppe 15 Minuten köcheln und fein mixen.",
+      "Brot mit Käse überbacken und dazu servieren."
     ],
     tags: ["Suppe", "Comfort Food"]
   }
@@ -235,18 +238,18 @@ const initialWeekTemplate = [
 ];
 
 const categoryOrder = [
-  "Gemuese",
+  "Gemüse",
   "Obst",
   "Fleisch und Fisch",
   "Milchprodukte",
-  "Kuehlregal",
-  "Tiefkuehl",
+  "Kühlregal",
+  "Tiefkühl",
   "Konserven",
   "Trockenwaren",
   "Brot und Backwaren",
-  "Oele und Saucen",
-  "Gewuerze",
-  "Backen und Suesses",
+  "Öle und Saucen",
+  "Gewürze",
+  "Backen und Süßes",
   "Sonstiges"
 ];
 
@@ -254,23 +257,28 @@ const state = {
   recipes: [...baseRecipes],
   customRecipeIds: [],
   selectedWeekOffset: 0,
-  weekPlans: {}
+  selectedShoppingWeekOffset: 0,
+  dayPlans: {},
+  selectedShoppingSlotIds: [],
+  shoppingSelectionWeekKeys: []
 };
 
-function createDefaultWeekAssignments() {
-  return initialWeekTemplate.map((entry) => normaliseDayAssignment(entry));
-}
-
-function createEmptyWeekAssignments() {
-  return weekdayNames.map(() => ({
+function createEmptyDayAssignment() {
+  return {
     breakfast: { recipeId: null, factor: 1, skipShopping: false },
     lunch: { recipeId: null, factor: 1, skipShopping: false },
     dinner: { recipeId: null, factor: 1, skipShopping: false }
-  }));
+  };
 }
 
-function createDefaultSelectedShoppingSlots() {
-  return weekdayNames.flatMap((_, index) => mealSlots.map((slot) => getSlotId(index, slot.key)));
+function createDefaultWeekAssignments(startDate = getPlanningWeekStart()) {
+  return getWeekDaysForStart(startDate).map(({ date }) =>
+    normaliseDayAssignment(initialWeekTemplate[getMondayBasedDayIndex(date)])
+  );
+}
+
+function createEmptyWeekAssignments() {
+  return Array.from({ length: planningWindowDays }, () => createEmptyDayAssignment());
 }
 
 function formatWeekKey(date) {
@@ -278,6 +286,15 @@ function formatWeekKey(date) {
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
+}
+
+function getMondayBasedDayIndex(date) {
+  const day = date.getDay();
+  return day === 0 ? 6 : day - 1;
+}
+
+function getWeekdayLabel(date) {
+  return new Intl.DateTimeFormat("de-DE", { weekday: "long" }).format(date);
 }
 
 function getWeekStartForOffset(offset = 0) {
@@ -296,10 +313,10 @@ function getSelectedWeekKey() {
 }
 
 function getWeekDaysForStart(weekStart) {
-  return weekdayNames.map((day, index) => {
+  return Array.from({ length: planningWindowDays }, (_, index) => {
     const date = new Date(weekStart);
     date.setDate(weekStart.getDate() + index);
-    return { day, date };
+    return { day: getWeekdayLabel(date), date, dateKey: formatWeekKey(date) };
   });
 }
 
@@ -307,37 +324,91 @@ function getSelectedWeekDays() {
   return getWeekDaysForStart(getSelectedWeekStart());
 }
 
-function createWeekAssignmentsForOffset(offset = state.selectedWeekOffset || 0) {
-  return offset === 0 ? createDefaultWeekAssignments() : createEmptyWeekAssignments();
+function getWeekDaysForOffset(offset = 0) {
+  return getWeekDaysForStart(getWeekStartForOffset(offset));
 }
 
-function cloneWeekAssignments(assignments) {
-  return assignments.map((assignment) => normaliseDayAssignment(structuredClone(assignment)));
+function getShoppingWeekStart() {
+  return getWeekStartForOffset(state.selectedShoppingWeekOffset || 0);
 }
 
-function cloneShoppingSlots(slotIds) {
-  return Array.isArray(slotIds) ? [...slotIds] : createDefaultSelectedShoppingSlots();
+function getShoppingWeekKey() {
+  return formatWeekKey(getShoppingWeekStart());
 }
 
-function ensureWeekPlan(weekKey = getSelectedWeekKey(), offset = state.selectedWeekOffset || 0) {
-  if (!state.weekPlans[weekKey]) {
-    state.weekPlans[weekKey] = {
-      weekAssignments: createWeekAssignmentsForOffset(offset),
-      selectedShoppingSlots: createDefaultSelectedShoppingSlots()
-    };
+function getShoppingWeekDays() {
+  return getWeekDaysForOffset(state.selectedShoppingWeekOffset || 0);
+}
+
+function getRecipePickerDays() {
+  const start = new Date();
+  start.setHours(0, 0, 0, 0);
+
+  return Array.from({ length: recipePickerDays }, (_, index) => {
+    const date = new Date(start);
+    date.setDate(start.getDate() + index);
+    return { day: getWeekdayLabel(date), date, dateKey: formatWeekKey(date) };
+  });
+}
+
+function createDefaultSelectedShoppingSlots(days = getSelectedWeekDays()) {
+  return days.flatMap(({ dateKey }) => mealSlots.map((slot) => getSlotId(dateKey, slot.key)));
+}
+
+function getDayPlan(dateKey) {
+  if (!state.dayPlans[dateKey]) {
+    state.dayPlans[dateKey] = createEmptyDayAssignment();
   }
 
-  return state.weekPlans[weekKey];
+  return state.dayPlans[dateKey];
+}
+
+function getDayPlanByIndex(dayIndex) {
+  const weekDay = getSelectedWeekDays()[dayIndex];
+  return weekDay ? getDayPlan(weekDay.dateKey) : createEmptyDayAssignment();
+}
+
+function ensureWeekPlan() {
+  ensureWeekSeeded(state.selectedWeekOffset || 0);
+  return {
+    weekAssignments: getSelectedWeekDays().map(({ dateKey }) => getDayPlan(dateKey)),
+    selectedShoppingSlots: state.selectedShoppingSlotIds
+  };
+}
+
+function ensureShoppingWeekPlan() {
+  ensureWeekSeeded(state.selectedShoppingWeekOffset || 0);
+  return {
+    weekAssignments: getShoppingWeekDays().map(({ dateKey }) => getDayPlan(dateKey)),
+    selectedShoppingSlots: state.selectedShoppingSlotIds
+  };
+}
+
+function ensureWeekSeeded(offset = 0) {
+  const weekDays = getWeekDaysForOffset(offset);
+  const currentWeekKey = formatWeekKey(getWeekStartForOffset(offset));
+  weekDays.forEach(({ dateKey }, index) => {
+    if (!state.dayPlans[dateKey]) {
+      state.dayPlans[dateKey] =
+        offset === 0
+          ? createDefaultWeekAssignments(getWeekStartForOffset(offset))[index]
+          : createEmptyDayAssignment();
+    }
+  });
+
+  if (!state.shoppingSelectionWeekKeys.includes(currentWeekKey)) {
+    const defaultSlotIds = createDefaultSelectedShoppingSlots(weekDays);
+    state.selectedShoppingSlotIds = [...new Set([...state.selectedShoppingSlotIds, ...defaultSlotIds])];
+    state.shoppingSelectionWeekKeys.push(currentWeekKey);
+  }
 }
 
 function loadState() {
-  const saved = window.localStorage.getItem(storageKey);
-  const currentWeekStart = getPlanningWeekStart();
-  const currentWeekKey = formatWeekKey(currentWeekStart);
-  const nextWeekKey = formatWeekKey(getWeekStartForOffset(1));
+  const saved = window.localStorage.getItem(storageKey) || window.localStorage.getItem(legacyStorageKey);
 
   if (!saved) {
-    ensureWeekPlan();
+    ensureWeekSeeded(state.selectedWeekOffset || 0);
+    ensureWeekSeeded(state.selectedShoppingWeekOffset || 0);
     return;
   }
 
@@ -361,59 +432,78 @@ function loadState() {
       state.selectedWeekOffset = Number(parsed.selectedWeekOffset);
     }
 
+    if (Number.isInteger(parsed.selectedShoppingWeekOffset) && Number(parsed.selectedShoppingWeekOffset) >= 0) {
+      state.selectedShoppingWeekOffset = Number(parsed.selectedShoppingWeekOffset);
+    }
+
+    if (parsed.dayPlans && typeof parsed.dayPlans === "object") {
+      Object.entries(parsed.dayPlans).forEach(([dateKey, assignment]) => {
+        state.dayPlans[dateKey] = normaliseDayAssignment(assignment);
+      });
+    }
+
+    if (Array.isArray(parsed.selectedShoppingSlotIds)) {
+      state.selectedShoppingSlotIds = [...new Set(parsed.selectedShoppingSlotIds)];
+    }
+
+    if (Array.isArray(parsed.shoppingSelectionWeekKeys)) {
+      state.shoppingSelectionWeekKeys = [...new Set(parsed.shoppingSelectionWeekKeys)];
+    }
+
     if (parsed.weekPlans && typeof parsed.weekPlans === "object") {
       Object.entries(parsed.weekPlans).forEach(([weekKey, weekPlan]) => {
-        const assignments = Array.isArray(weekPlan?.weekAssignments) && weekPlan.weekAssignments.length === 7
-          ? weekPlan.weekAssignments.map(normaliseDayAssignment)
-          : createDefaultWeekAssignments();
-        let selectedShoppingSlots = createDefaultSelectedShoppingSlots();
+        const assignments = Array.isArray(weekPlan?.weekAssignments) ? weekPlan.weekAssignments : [];
+        const selectedShoppingSlots = Array.isArray(weekPlan?.selectedShoppingSlots)
+          ? weekPlan.selectedShoppingSlots
+          : Array.isArray(weekPlan?.selectedShoppingDays)
+            ? weekPlan.selectedShoppingDays.flatMap((dayIndex) => mealSlots.map((slot) => `${dayIndex}-${slot.key}`))
+            : [];
+        const startDate = new Date(`${weekKey}T00:00:00`);
+        const weekDays = getWeekDaysForStart(startDate).slice(0, assignments.length);
 
-        if (Array.isArray(weekPlan?.selectedShoppingSlots) && weekPlan.selectedShoppingSlots.length > 0) {
-          selectedShoppingSlots = weekPlan.selectedShoppingSlots;
-        } else if (Array.isArray(weekPlan?.selectedShoppingDays) && weekPlan.selectedShoppingDays.length > 0) {
-          selectedShoppingSlots = weekPlan.selectedShoppingDays.flatMap((dayIndex) =>
-            mealSlots.map((slot) => getSlotId(dayIndex, slot.key))
-          );
-        }
+        weekDays.forEach(({ dateKey }, index) => {
+          state.dayPlans[dateKey] = normaliseDayAssignment(assignments[index]);
+        });
 
-        state.weekPlans[weekKey] = {
-          weekAssignments: assignments,
-          selectedShoppingSlots
-        };
+        selectedShoppingSlots.forEach((slotId) => {
+          const [legacyDayIndex, mealKey] = String(slotId).split("-");
+          const dayIndex = Number(legacyDayIndex);
+          const weekDay = weekDays[dayIndex];
+          if (weekDay && mealKey) {
+            state.selectedShoppingSlotIds.push(getSlotId(weekDay.dateKey, mealKey));
+          }
+        });
+      });
+    } else if (Array.isArray(parsed.weekAssignments)) {
+      const weekDays = getWeekDaysForStart(getPlanningWeekStart()).slice(0, parsed.weekAssignments.length);
+
+      weekDays.forEach(({ dateKey }, index) => {
+        state.dayPlans[dateKey] = normaliseDayAssignment(parsed.weekAssignments[index]);
       });
 
-      if (!state.weekPlans[currentWeekKey] && state.weekPlans[nextWeekKey]) {
-        state.weekPlans[currentWeekKey] = {
-          weekAssignments: cloneWeekAssignments(state.weekPlans[nextWeekKey].weekAssignments),
-          selectedShoppingSlots: cloneShoppingSlots(state.weekPlans[nextWeekKey].selectedShoppingSlots)
-        };
-      }
-    } else if (Array.isArray(parsed.weekAssignments) && parsed.weekAssignments.length === 7) {
-      let selectedShoppingSlots = createDefaultSelectedShoppingSlots();
+      const selectedShoppingSlots = Array.isArray(parsed.selectedShoppingSlots)
+        ? parsed.selectedShoppingSlots
+        : Array.isArray(parsed.selectedShoppingDays)
+          ? parsed.selectedShoppingDays.flatMap((dayIndex) => mealSlots.map((slot) => `${dayIndex}-${slot.key}`))
+          : [];
 
-      if (Array.isArray(parsed.selectedShoppingSlots) && parsed.selectedShoppingSlots.length > 0) {
-        selectedShoppingSlots = parsed.selectedShoppingSlots;
-      } else if (Array.isArray(parsed.selectedShoppingDays) && parsed.selectedShoppingDays.length > 0) {
-        selectedShoppingSlots = parsed.selectedShoppingDays.flatMap((dayIndex) =>
-          mealSlots.map((slot) => getSlotId(dayIndex, slot.key))
-        );
-      }
-
-      state.weekPlans[currentWeekKey] = {
-        weekAssignments: parsed.weekAssignments.map(normaliseDayAssignment),
-        selectedShoppingSlots
-      };
-
-      state.weekPlans[nextWeekKey] = {
-        weekAssignments: cloneWeekAssignments(state.weekPlans[currentWeekKey].weekAssignments),
-        selectedShoppingSlots: cloneShoppingSlots(state.weekPlans[currentWeekKey].selectedShoppingSlots)
-      };
+      selectedShoppingSlots.forEach((slotId) => {
+        const [legacyDayIndex, mealKey] = String(slotId).split("-");
+        const dayIndex = Number(legacyDayIndex);
+        const weekDay = weekDays[dayIndex];
+        if (weekDay && mealKey) {
+          state.selectedShoppingSlotIds.push(getSlotId(weekDay.dateKey, mealKey));
+        }
+      });
     }
   } catch (error) {
     window.localStorage.removeItem(storageKey);
+    window.localStorage.removeItem(legacyStorageKey);
   }
 
-  ensureWeekPlan();
+  state.selectedShoppingSlotIds = [...new Set(state.selectedShoppingSlotIds)];
+  ensureWeekSeeded(state.selectedWeekOffset || 0);
+  ensureWeekSeeded(state.selectedShoppingWeekOffset || 0);
 }
 
 function saveState() {
@@ -423,7 +513,10 @@ function saveState() {
       recipes: state.recipes,
       customRecipeIds: state.customRecipeIds,
       selectedWeekOffset: state.selectedWeekOffset,
-      weekPlans: state.weekPlans
+      selectedShoppingWeekOffset: state.selectedShoppingWeekOffset,
+      dayPlans: state.dayPlans,
+      selectedShoppingSlotIds: state.selectedShoppingSlotIds,
+      shoppingSelectionWeekKeys: state.shoppingSelectionWeekKeys
     })
   );
 }
@@ -432,8 +525,8 @@ function recipeMap() {
   return new Map(state.recipes.map((recipe) => [recipe.id, recipe]));
 }
 
-function getSlotId(dayIndex, mealKey) {
-  return `${dayIndex}-${mealKey}`;
+function getSlotId(dayKey, mealKey) {
+  return `${dayKey}::${mealKey}`;
 }
 
 function normaliseMealEntry(entry) {
@@ -487,6 +580,8 @@ const cookbookMealprepOnly = document.querySelector("#cookbook-mealprep-only");
 const shoppingDayFilters = document.querySelector("#shopping-day-filters");
 const shoppingOutput = document.querySelector("#shopping-output");
 const copyButton = document.querySelector("#copy-button");
+const printShoppingButton = document.querySelector("#print-shopping-button");
+const shoppingWeekSelect = document.querySelector("#shopping-week-select");
 const copyFeedback = document.querySelector("#copy-feedback");
 const detailSection = document.querySelector("#recipe-detail");
 const backButton = document.querySelector("#back-button");
@@ -500,6 +595,8 @@ const printWeekButton = document.querySelector("#print-week-button");
 const printWeekRange = document.querySelector("#print-week-range");
 const printWeekHeadings = document.querySelector("#print-week-headings");
 const printWeekBody = document.querySelector("#print-week-body");
+const printShoppingRange = document.querySelector("#print-shopping-range");
+const printShoppingBody = document.querySelector("#print-shopping-body");
 const versionCounter = document.querySelector("#version-counter");
 const recipeFormPanel = document.querySelector("#recipe-form-panel");
 const openRecipeFormButton = document.querySelector("#open-recipe-form");
@@ -546,27 +643,38 @@ function formatLongDate(date) {
 }
 
 function renderWeekSelect() {
+  const options = buildWeekSelectOptions();
+  weekSelect.innerHTML = options;
+  weekSelect.value = String(state.selectedWeekOffset || 0);
+}
+
+function renderShoppingWeekSelect() {
+  const options = buildWeekSelectOptions();
+  shoppingWeekSelect.innerHTML = options;
+  shoppingWeekSelect.value = String(state.selectedShoppingWeekOffset || 0);
+}
+
+function buildWeekSelectOptions() {
   const options = Array.from({ length: 12 }, (_, offset) => {
     const weekDays = getWeekDaysForStart(getWeekStartForOffset(offset));
     const labelPrefix =
-      offset === 0 ? "Aktuelle Woche" : offset === 1 ? "Naechste Woche" : `In ${offset} Wochen`;
-    return `<option value="${offset}">${labelPrefix}: ${formatShortDate(weekDays[0].date)} bis ${formatShortDate(weekDays[6].date)}</option>`;
+      offset === 0 ? "Aktuelle Woche" : offset === 1 ? "Nächste Woche" : `In ${offset} Wochen`;
+    return `<option value="${offset}">${labelPrefix}: ${formatShortDate(weekDays[0].date)} bis ${formatShortDate(weekDays[planningWindowDays - 1].date)}</option>`;
   });
 
-  weekSelect.innerHTML = options.join("");
-  weekSelect.value = String(state.selectedWeekOffset || 0);
+  return options.join("");
 }
 
 function renderWeekRange() {
   const weekDays = getSelectedWeekDays();
-  weekRange.textContent = `${formatLongDate(weekDays[0].date)} bis ${formatLongDate(weekDays[6].date)}`;
+  weekRange.textContent = `${formatLongDate(weekDays[0].date)} bis ${formatLongDate(weekDays[planningWindowDays - 1].date)}`;
 }
 
 function renderPrintWeekView() {
   const recipesById = recipeMap();
   const weekDays = getSelectedWeekDays();
   const weekPlan = ensureWeekPlan();
-  printWeekRange.textContent = `${formatLongDate(weekDays[0].date)} bis ${formatLongDate(weekDays[6].date)}`;
+  printWeekRange.textContent = `${formatLongDate(weekDays[0].date)} bis ${formatLongDate(weekDays[planningWindowDays - 1].date)}`;
   printWeekHeadings.innerHTML = [
     "<th>Mahlzeit</th>",
     ...weekDays.map(
@@ -599,6 +707,59 @@ function renderPrintWeekView() {
     .join("");
 }
 
+function renderPrintShoppingView() {
+  const recipesById = recipeMap();
+  const weekDays = getShoppingWeekDays();
+  const weekPlan = ensureShoppingWeekPlan();
+  const grouped = new Map();
+
+  categoryOrder.forEach((category) => grouped.set(category, []));
+
+  weekPlan.weekAssignments.forEach((assignment, dayIndex) => {
+    mealSlots.forEach((slot) => {
+      const slotId = getSlotId(weekDays[dayIndex].dateKey, slot.key);
+      if (!weekPlan.selectedShoppingSlots.includes(slotId)) {
+        return;
+      }
+
+      const mealEntry = assignment[slot.key];
+      const recipeId = mealEntry.recipeId;
+      if (!recipeId || mealEntry.skipShopping) {
+        return;
+      }
+
+      const recipe = recipesById.get(recipeId);
+      if (!recipe) {
+        return;
+      }
+
+      recipe.ingredients.forEach((ingredient) => {
+        const category = grouped.has(ingredient.category) ? ingredient.category : "Sonstiges";
+        grouped.get(category).push(scaleIngredientText(ingredient.item, mealEntry.factor));
+      });
+    });
+  });
+
+  const categorySections = [...grouped.entries()].filter(([, items]) => items.length > 0);
+
+  printShoppingRange.textContent = `${formatLongDate(weekDays[0].date)} bis ${formatLongDate(weekDays[planningWindowDays - 1].date)}`;
+  printShoppingBody.innerHTML = categorySections
+    .map(
+      ([category, items]) => `
+        <section class="print-shopping-section">
+          <h2>${category}</h2>
+          <div class="print-shopping-items">
+            ${items
+              .sort((a, b) => a.localeCompare(b, "de"))
+              .map((item) => `<div class="print-shopping-item">${item}</div>`)
+              .join("")}
+          </div>
+        </section>
+      `
+    )
+    .join("");
+}
+
 function incrementVersionCounter() {
   const savedCount = Number(window.localStorage.getItem(versionCounterKey) || "0");
   const nextCount = savedCount + 1;
@@ -606,14 +767,13 @@ function incrementVersionCounter() {
   versionCounter.textContent = `Version ${nextCount}`;
 }
 
-function renderSlotOptions(selectElement, emptyLabel) {
-  const weekDays = getSelectedWeekDays();
+function renderSlotOptions(selectElement, emptyLabel, days = getSelectedWeekDays()) {
   selectElement.innerHTML = [
     `<option value="">${emptyLabel}</option>`,
-    ...weekDays.flatMap(({ day, date }, dayIndex) =>
+    ...days.flatMap(({ day, date, dateKey }) =>
       mealSlots.map(
         (slot) =>
-          `<option value="${getSlotId(dayIndex, slot.key)}">${day} (${formatShortDate(date)}) - ${slot.label}</option>`
+          `<option value="${getSlotId(dateKey, slot.key)}">${day} (${formatShortDate(date)}) - ${slot.label}</option>`
       )
     )
   ].join("");
@@ -768,14 +928,16 @@ function renderWeek() {
       const dayNutritionTotals = getDayNutritionTotals(weekPlan.weekAssignments[index], recipesById);
 
       return `
-        <article class="card">
-          <p class="day-label">${day}</p>
-          <p class="day-date">${formatShortDate(date)}</p>
+        <article class="card week-day-card">
+          <div class="week-day-header">
+            <p class="day-label">${day}</p>
+            <p class="day-date">${formatShortDate(date)}</p>
+          </div>
           <div class="week-day-nutrition" aria-label="Tageswerte">
-            <span class="week-day-nutrition-item"><strong>${formatNutritionTotal(dayNutritionTotals.kcal)}</strong> kcal</span>
-            <span class="week-day-nutrition-item"><strong>${formatNutritionTotal(dayNutritionTotals.fat, "g")}</strong> F</span>
-            <span class="week-day-nutrition-item"><strong>${formatNutritionTotal(dayNutritionTotals.protein, "g")}</strong> P</span>
-            <span class="week-day-nutrition-item"><strong>${formatNutritionTotal(dayNutritionTotals.carbs, "g")}</strong> KH</span>
+            <span class="week-day-nutrition-item"><span class="nutrition-chip-label">kcal</span><strong>${formatNutritionTotal(dayNutritionTotals.kcal)}</strong></span>
+            <span class="week-day-nutrition-item"><span class="nutrition-chip-label">F</span><strong>${formatNutritionTotal(dayNutritionTotals.fat, "g")}</strong></span>
+            <span class="week-day-nutrition-item"><span class="nutrition-chip-label">P</span><strong>${formatNutritionTotal(dayNutritionTotals.protein, "g")}</strong></span>
+            <span class="week-day-nutrition-item"><span class="nutrition-chip-label">KH</span><strong>${formatNutritionTotal(dayNutritionTotals.carbs, "g")}</strong></span>
           </div>
           <div class="meal-slot-list">
             ${mealSlots
@@ -813,16 +975,17 @@ function renderWeek() {
                     <div class="meal-tags">
                       <span class="pill">${recipe.category}</span>
                       <span class="pill">${recipe.time}</span>
-                      <span class="pill">${formatFactorLabel(mealEntry.factor)}</span>
                       ${mealEntry.skipShopping ? '<span class="pill">Schon eingeplant</span>' : ""}
                     </div>
-                    <div class="meal-slot-actions">
-                      <a class="button secondary small" href="#rezept/${recipe.id}">Rezept ansehen</a>
+                    <div class="meal-factor-row">
+                      <label class="meal-factor-label" for="meal-factor-${index}-${slot.key}">Portionen</label>
                       <select
+                        id="meal-factor-${index}-${slot.key}"
                         class="add-select meal-factor-select"
                         data-action="factor"
                         data-day-index="${index}"
                         data-meal-key="${slot.key}"
+                        aria-label="Portionsfaktor für ${recipe.title}"
                       >
                         ${[1, 2, 3, 4, 5, 6]
                           .map(
@@ -831,8 +994,11 @@ function renderWeek() {
                           )
                           .join("")}
                       </select>
+                    </div>
+                    <div class="meal-slot-actions">
+                      <a class="button secondary small meal-view-button" href="#rezept/${recipe.id}">Rezept ansehen</a>
                       <button
-                        class="button secondary small"
+                        class="button subtle-tag small"
                         type="button"
                         data-action="toggle-shopping"
                         data-day-index="${index}"
@@ -841,13 +1007,13 @@ function renderWeek() {
                         ${mealEntry.skipShopping ? "In Einkaufsliste aufnehmen" : "Schon eingeplant"}
                       </button>
                       <button
-                        class="button ghost small"
+                        class="button danger-outline small"
                         type="button"
                         data-action="remove"
                         data-day-index="${index}"
                         data-meal-key="${slot.key}"
                       >
-                        Entfernen
+                        Rezept entfernen
                       </button>
                     </div>
                   </div>
@@ -899,7 +1065,6 @@ function renderCookbook() {
           ${recipe.image ? `<img class="cookbook-image" src="${recipe.image}" alt="${recipe.title}" loading="lazy" />` : ""}
           <p class="archive-week">${recipe.category}</p>
           <h3>${recipe.title}</h3>
-          <p>${recipe.description}</p>
           <div class="archive-tags">
             <span class="pill">${recipe.time}</span>
             <span class="pill">${recipe.servings}</span>
@@ -964,17 +1129,17 @@ function renderPlannerModalCategories() {
 }
 
 function renderShoppingDayFilters() {
-  const weekDays = getSelectedWeekDays();
-  const weekPlan = ensureWeekPlan();
-  const allSlotIds = weekDays.flatMap((_, dayIndex) => mealSlots.map((slot) => getSlotId(dayIndex, slot.key)));
-  const allSelected = weekPlan.selectedShoppingSlots.length === allSlotIds.length;
+  const weekDays = getShoppingWeekDays();
+  const weekPlan = ensureShoppingWeekPlan();
+  const allSlotIds = weekDays.flatMap(({ dateKey }) => mealSlots.map((slot) => getSlotId(dateKey, slot.key)));
+  const allSelected = allSlotIds.every((slotId) => weekPlan.selectedShoppingSlots.includes(slotId));
   shoppingDayFilters.innerHTML = [
     `<div class="shopping-filter-group">
       <span class="shopping-filter-label">Gesamt</span>
       <button class="filter-chip ${allSelected ? "active" : ""}" type="button" data-filter-type="all">Alle Tage</button>
     </div>`,
-    ...weekDays.map(({ day }, dayIndex) => {
-      const daySlotIds = mealSlots.map((slot) => getSlotId(dayIndex, slot.key));
+    ...weekDays.map(({ day, dateKey }, dayIndex) => {
+      const daySlotIds = mealSlots.map((slot) => getSlotId(dateKey, slot.key));
       const fullDaySelected = daySlotIds.every((slotId) => weekPlan.selectedShoppingSlots.includes(slotId));
 
       return `
@@ -985,7 +1150,7 @@ function renderShoppingDayFilters() {
           </button>
           ${mealSlots
             .map((slot) => {
-              const slotId = getSlotId(dayIndex, slot.key);
+              const slotId = getSlotId(dateKey, slot.key);
               return `
                 <button
                   class="filter-chip ${weekPlan.selectedShoppingSlots.includes(slotId) ? "active" : ""}"
@@ -1009,7 +1174,6 @@ function renderGeneratedRecipe(recipe) {
   document.querySelector("#ai-result-tag").textContent = recipe.category;
   document.querySelector("#ai-result-time").textContent = recipe.time;
   document.querySelector("#ai-result-servings").textContent = recipe.servings;
-  document.querySelector("#ai-result-description").textContent = recipe.description;
   document.querySelector("#ai-result-nutrition").innerHTML = [
     ["kcal", recipe.nutrition.kcal],
     ["F", recipe.nutrition.fat],
@@ -1059,7 +1223,6 @@ function renderPlannerModalRecipes() {
         <article class="modal-recipe-card">
           <p class="archive-week">${recipe.category}</p>
           <h3>${recipe.title}</h3>
-          <p>${recipe.description}</p>
           <div class="archive-tags">
             <span class="pill">${recipe.time}</span>
             <span class="pill">${recipe.servings}</span>
@@ -1109,15 +1272,15 @@ function closePlannerModal() {
 
 function buildShoppingList() {
   const recipesById = recipeMap();
-  const weekDays = getSelectedWeekDays();
-  const weekPlan = ensureWeekPlan();
+  const weekDays = getShoppingWeekDays();
+  const weekPlan = ensureShoppingWeekPlan();
   const grouped = new Map();
 
   categoryOrder.forEach((category) => grouped.set(category, []));
 
   weekPlan.weekAssignments.forEach((assignment, dayIndex) => {
     mealSlots.forEach((slot) => {
-      const slotId = getSlotId(dayIndex, slot.key);
+      const slotId = getSlotId(weekDays[dayIndex].dateKey, slot.key);
       if (!weekPlan.selectedShoppingSlots.includes(slotId)) {
         return;
       }
@@ -1148,38 +1311,10 @@ function buildShoppingList() {
     .filter(([, items]) => items.length > 0)
     .map(([category, items]) => [category, items.sort((a, b) => a.localeCompare(b, "de"))]);
 
-  const mealEntries = weekDays
-    .flatMap(({ day }, dayIndex) =>
-      mealSlots.map((slot) => {
-        const slotId = getSlotId(dayIndex, slot.key);
-        if (!weekPlan.selectedShoppingSlots.includes(slotId)) {
-          return null;
-        }
-
-        const mealEntry = weekPlan.weekAssignments[dayIndex][slot.key];
-        const recipeId = mealEntry.recipeId;
-        if (!recipeId) {
-          return `- ${day} ${slot.label}: frei`;
-        }
-
-        if (mealEntry.skipShopping) {
-          return `- ${day} ${slot.label}: ${recipeMap().get(recipeId)?.title || "Rezept"} (bereits eingeplant)`;
-        }
-
-        const recipe = recipesById.get(recipeId);
-        return `- ${day} ${slot.label}: ${recipe.title} (${formatFactorLabel(mealEntry.factor)})`;
-      })
-    )
-    .filter(Boolean)
-    .join("\n");
-
   return [
-    `Einkaufsliste fuer ${formatLongDate(weekDays[0].date)} bis ${formatLongDate(weekDays[6].date)}`,
+    `Einkaufsliste für ${formatLongDate(weekDays[0].date)} bis ${formatLongDate(weekDays[planningWindowDays - 1].date)}`,
     "",
-    "Geplante Mahlzeiten:",
-    mealEntries,
-    "",
-    ...categorySections.flatMap(([category, items]) => [category, ...items.map((item) => `- ${item}`), ""])
+    ...categorySections.flatMap(([category, items]) => [category, ...items, ""])
   ]
     .join("\n")
     .trim();
@@ -1189,36 +1324,58 @@ function renderShoppingList() {
   shoppingOutput.textContent = buildShoppingList();
 }
 
+function exportShoppingList() {
+  const shoppingText = buildShoppingList();
+  const blob = new Blob([shoppingText], { type: "text/plain;charset=utf-8" });
+  const downloadUrl = URL.createObjectURL(blob);
+  const downloadLink = document.createElement("a");
+  const weekDays = getShoppingWeekDays();
+
+  downloadLink.href = downloadUrl;
+  downloadLink.download = `einkaufsliste-${formatWeekKey(weekDays[0].date)}.txt`;
+  document.body.append(downloadLink);
+  downloadLink.click();
+  downloadLink.remove();
+  URL.revokeObjectURL(downloadUrl);
+}
+
 function toggleShoppingFilter(filterType, value) {
-  const weekDays = getSelectedWeekDays();
-  const weekPlan = ensureWeekPlan();
+  const weekDays = getShoppingWeekDays();
+  ensureWeekSeeded(state.selectedShoppingWeekOffset || 0);
 
   if (filterType === "all") {
-    const allSlotIds = weekDays.flatMap((_, dayIndex) =>
-      mealSlots.map((slot) => getSlotId(dayIndex, slot.key))
+    const allSlotIds = weekDays.flatMap(({ dateKey }) =>
+      mealSlots.map((slot) => getSlotId(dateKey, slot.key))
     );
-    const allSelected = allSlotIds.every((slotId) => weekPlan.selectedShoppingSlots.includes(slotId));
-    weekPlan.selectedShoppingSlots = allSelected ? [] : allSlotIds;
+    const allSelected = allSlotIds.every((slotId) => state.selectedShoppingSlotIds.includes(slotId));
+    state.selectedShoppingSlotIds = allSelected
+      ? state.selectedShoppingSlotIds.filter((slotId) => !allSlotIds.includes(slotId))
+      : [...new Set([...state.selectedShoppingSlotIds, ...allSlotIds])];
   } else if (filterType === "day") {
     const dayIndex = Number(value);
-    const daySlotIds = mealSlots.map((slot) => getSlotId(dayIndex, slot.key));
-    const allSelected = daySlotIds.every((slotId) => weekPlan.selectedShoppingSlots.includes(slotId));
+    const weekDay = weekDays[dayIndex];
+    if (!weekDay) {
+      return;
+    }
+
+    const daySlotIds = mealSlots.map((slot) => getSlotId(weekDay.dateKey, slot.key));
+    const allSelected = daySlotIds.every((slotId) => state.selectedShoppingSlotIds.includes(slotId));
 
     if (allSelected) {
-      const remainingSlots = weekPlan.selectedShoppingSlots.filter((slotId) => !daySlotIds.includes(slotId));
-      weekPlan.selectedShoppingSlots = remainingSlots.length ? remainingSlots : daySlotIds;
+      const remainingSlots = state.selectedShoppingSlotIds.filter((slotId) => !daySlotIds.includes(slotId));
+      state.selectedShoppingSlotIds = remainingSlots;
     } else {
-      weekPlan.selectedShoppingSlots = [...new Set([...weekPlan.selectedShoppingSlots, ...daySlotIds])];
+      state.selectedShoppingSlotIds = [...new Set([...state.selectedShoppingSlotIds, ...daySlotIds])];
     }
   } else if (filterType === "slot") {
     const slotId = value;
-    const isSelected = weekPlan.selectedShoppingSlots.includes(slotId);
+    const isSelected = state.selectedShoppingSlotIds.includes(slotId);
 
     if (isSelected) {
-      const remainingSlots = weekPlan.selectedShoppingSlots.filter((entry) => entry !== slotId);
-      weekPlan.selectedShoppingSlots = remainingSlots.length ? remainingSlots : [slotId];
+      const remainingSlots = state.selectedShoppingSlotIds.filter((entry) => entry !== slotId);
+      state.selectedShoppingSlotIds = remainingSlots;
     } else {
-      weekPlan.selectedShoppingSlots = [...weekPlan.selectedShoppingSlots, slotId];
+      state.selectedShoppingSlotIds = [...new Set([...state.selectedShoppingSlotIds, slotId])];
     }
   }
 
@@ -1257,7 +1414,6 @@ function renderRecipeDetail(recipeId) {
   document.querySelector("#detail-tag").textContent = recipe.category;
   document.querySelector("#detail-time").textContent = recipe.time;
   document.querySelector("#detail-servings").textContent = recipe.servings;
-  document.querySelector("#detail-description").textContent = recipe.description;
   document.querySelector("#detail-nutrition").innerHTML = [
     ["kcal", recipe.nutrition.kcal],
     ["F", recipe.nutrition.fat],
@@ -1279,7 +1435,7 @@ function renderRecipeDetail(recipeId) {
   document.querySelector("#detail-steps").innerHTML = recipe.steps
     .map((step) => `<li>${step}</li>`)
     .join("");
-  renderSlotOptions(detailSlotSelect, "Slot waehlen");
+  renderSlotOptions(detailSlotSelect, "Slot wählen");
   editRecipeButton.dataset.recipeId = recipe.id;
   deleteRecipeButton.dataset.recipeId = recipe.id;
   detailAddToWeekButton.dataset.recipeId = recipe.id;
@@ -1288,37 +1444,49 @@ function renderRecipeDetail(recipeId) {
   detailSection.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
-function addRecipeToWeek(recipeId, dayIndex, mealKey) {
-  const weekPlan = ensureWeekPlan();
-  const weekDays = getSelectedWeekDays();
-  const existingRecipeId = weekPlan.weekAssignments[dayIndex][mealKey].recipeId;
+function addRecipeToDate(recipeId, dateKey, mealKey) {
+  const dayPlan = getDayPlan(dateKey);
+  const existingRecipeId = dayPlan[mealKey].recipeId;
+
   if (existingRecipeId && existingRecipeId !== recipeId) {
     const existingRecipe = recipeMap().get(existingRecipeId);
+    const date = new Date(`${dateKey}T00:00:00`);
     const shouldReplace = window.confirm(
-      `${weekDays[dayIndex].day} ${mealSlots.find((slot) => slot.key === mealKey).label} ist bereits mit "${existingRecipe.title}" belegt. Moechtest du das Rezept ersetzen?`
+      `${getWeekdayLabel(date)} ${mealSlots.find((slot) => slot.key === mealKey).label} ist bereits mit "${existingRecipe.title}" belegt. Möchtest du das Rezept ersetzen?`
     );
 
     if (!shouldReplace) {
-      return;
+      return false;
     }
   }
 
-  weekPlan.weekAssignments[dayIndex][mealKey] = { recipeId, factor: 1 };
+  dayPlan[mealKey] = { recipeId, factor: 1, skipShopping: false };
   saveState();
   renderAll();
+  return true;
+}
+
+function addRecipeToWeek(recipeId, dayIndex, mealKey) {
+  const weekDays = getSelectedWeekDays();
+  const weekDay = weekDays[dayIndex];
+  if (!weekDay) {
+    return;
+  }
+
+  addRecipeToDate(recipeId, weekDay.dateKey, mealKey);
 }
 
 function removeRecipeFromWeek(dayIndex, mealKey) {
-  const weekPlan = ensureWeekPlan();
-  weekPlan.weekAssignments[dayIndex][mealKey] = { recipeId: null, factor: 1 };
+  const dayPlan = getDayPlanByIndex(dayIndex);
+  dayPlan[mealKey] = { recipeId: null, factor: 1, skipShopping: false };
   saveState();
   renderAll();
 }
 
 function updateMealFactor(dayIndex, mealKey, factor) {
-  const weekPlan = ensureWeekPlan();
-  const mealEntry = weekPlan.weekAssignments[dayIndex][mealKey];
-  weekPlan.weekAssignments[dayIndex][mealKey] = {
+  const dayPlan = getDayPlanByIndex(dayIndex);
+  const mealEntry = dayPlan[mealKey];
+  dayPlan[mealKey] = {
     recipeId: mealEntry.recipeId,
     factor,
     skipShopping: mealEntry.skipShopping
@@ -1328,9 +1496,9 @@ function updateMealFactor(dayIndex, mealKey, factor) {
 }
 
 function toggleMealShoppingStatus(dayIndex, mealKey) {
-  const weekPlan = ensureWeekPlan();
-  const mealEntry = weekPlan.weekAssignments[dayIndex][mealKey];
-  weekPlan.weekAssignments[dayIndex][mealKey] = {
+  const dayPlan = getDayPlanByIndex(dayIndex);
+  const mealEntry = dayPlan[mealKey];
+  dayPlan[mealKey] = {
     recipeId: mealEntry.recipeId,
     factor: mealEntry.factor,
     skipShopping: !mealEntry.skipShopping
@@ -1347,7 +1515,7 @@ function deleteRecipe(recipeId) {
   }
 
   const shouldDelete = window.confirm(
-    `Moechtest du "${recipe.title}" wirklich aus dem Kochbuch loeschen?`
+    `Möchtest du "${recipe.title}" wirklich aus dem Kochbuch löschen?`
   );
   if (!shouldDelete) {
     return;
@@ -1355,13 +1523,13 @@ function deleteRecipe(recipeId) {
 
   state.recipes = state.recipes.filter((entry) => entry.id !== recipeId);
   state.customRecipeIds = state.customRecipeIds.filter((id) => id !== recipeId);
-  Object.values(state.weekPlans).forEach((weekPlan) => {
-    weekPlan.weekAssignments = weekPlan.weekAssignments.map((assignment) => ({
-      breakfast:
-        assignment.breakfast.recipeId === recipeId ? { recipeId: null, factor: 1 } : assignment.breakfast,
-      lunch: assignment.lunch.recipeId === recipeId ? { recipeId: null, factor: 1 } : assignment.lunch,
-      dinner: assignment.dinner.recipeId === recipeId ? { recipeId: null, factor: 1 } : assignment.dinner
-    }));
+  Object.values(state.dayPlans).forEach((assignment) => {
+    assignment.breakfast =
+      assignment.breakfast.recipeId === recipeId ? { recipeId: null, factor: 1, skipShopping: false } : assignment.breakfast;
+    assignment.lunch =
+      assignment.lunch.recipeId === recipeId ? { recipeId: null, factor: 1, skipShopping: false } : assignment.lunch;
+    assignment.dinner =
+      assignment.dinner.recipeId === recipeId ? { recipeId: null, factor: 1, skipShopping: false } : assignment.dinner;
   });
 
   saveState();
@@ -1384,7 +1552,6 @@ function fillRecipeForm(recipe) {
   document.querySelector("#recipe-category").value = recipe.category;
   document.querySelector("#recipe-time").value = extractNumberString(recipe.time);
   document.querySelector("#recipe-servings").value = extractNumberString(recipe.servings);
-  document.querySelector("#recipe-description").value = recipe.description;
   document.querySelector("#recipe-image").value = recipe.image || "";
   document.querySelector("#recipe-kcal").value = extractNumberString(recipe.nutrition.kcal);
   document.querySelector("#recipe-fat").value = extractNumberString(recipe.nutrition.fat);
@@ -1406,7 +1573,7 @@ function openRecipeEditor(recipeId) {
   editingRecipeId = recipeId;
   recipeForm.reset();
   fillRecipeForm(recipe);
-  recipeSubmitButton.textContent = "Aenderungen speichern";
+  recipeSubmitButton.textContent = "Änderungen speichern";
   document.querySelector("#recipe-form-panel h2").textContent = "Rezept bearbeiten";
   recipeSlotSelect.value = "";
   recipeFormPanel.classList.remove("hidden");
@@ -1422,7 +1589,7 @@ function setAiLoadingState(isLoading) {
 async function requestGeneratedRecipe() {
   const prompt = aiPromptInput.value.trim();
   if (!prompt) {
-    aiStatus.textContent = "Bitte gib zuerst Vorgaben fuer das Rezept ein.";
+    aiStatus.textContent = "Bitte gib zuerst Vorgaben für das Rezept ein.";
     return;
   }
 
@@ -1449,7 +1616,7 @@ async function requestGeneratedRecipe() {
 
     latestGeneratedRecipe = normaliseGeneratedRecipe(payload.recipe, "ai");
     renderGeneratedRecipe(latestGeneratedRecipe);
-    aiStatus.textContent = "Neues Rezept ist da. Wenn es dir gefaellt, kannst du es direkt ins Kochbuch uebernehmen.";
+    aiStatus.textContent = "Neues Rezept ist da. Wenn es dir gefällt, kannst du es direkt ins Kochbuch übernehmen.";
   } catch (error) {
     const isLikelyServerIssue =
       error instanceof TypeError ||
@@ -1457,7 +1624,7 @@ async function requestGeneratedRecipe() {
       String(error.message || "").includes("Load failed");
 
     aiStatus.textContent = isLikelyServerIssue
-      ? "Die KI ist gerade nicht erreichbar. Bitte starte die App ueber `npm start` und pruefe, ob deine `.env` einen `OPENAI_API_KEY` enthaelt."
+      ? "Die KI ist gerade nicht erreichbar. Bitte starte die App über `npm start` und prüfe, ob deine `.env` einen `OPENAI_API_KEY` enthält."
       : error.message || "Beim Generieren ist etwas schiefgelaufen.";
   } finally {
     setAiLoadingState(false);
@@ -1482,7 +1649,7 @@ function createCustomRecipeFromForm(event) {
     category: String(formData.get("category")).trim(),
     time: formatMinutes(formData.get("time")),
     servings: formatServings(formData.get("servings")),
-    description: String(formData.get("description")).trim(),
+    description: editingRecipeId ? recipeMap().get(editingRecipeId)?.description || "" : "",
     image: normaliseImageValue(formData.get("image")),
     ingredients,
     nutrition: {
@@ -1514,10 +1681,15 @@ function createCustomRecipeFromForm(event) {
 
   const slotValue = String(formData.get("slotSelect")).trim();
   if (slotValue !== "") {
-    const [dayIndex, mealKey] = slotValue.split("-");
-    addRecipeToWeek(recipeId, Number(dayIndex), mealKey);
-    closeRecipeForm();
-    return;
+    const separatorIndex = slotValue.lastIndexOf("::");
+    const dateKey = slotValue.slice(0, separatorIndex);
+    const mealKey = slotValue.slice(separatorIndex + 2);
+
+    if (dateKey && mealKey) {
+      addRecipeToDate(recipeId, dateKey, mealKey);
+      closeRecipeForm();
+      return;
+    }
   }
 
   saveState();
@@ -1541,7 +1713,7 @@ function saveGeneratedRecipeToCookbook() {
   saveState();
   renderAll();
   window.location.hash = `#rezept/${recipeToSave.id}`;
-  aiStatus.textContent = `"${recipeToSave.title}" wurde ins Kochbuch uebernommen.`;
+  aiStatus.textContent = `"${recipeToSave.title}" wurde ins Kochbuch übernommen.`;
 }
 
 function handleWeekActions(event) {
@@ -1605,10 +1777,11 @@ function syncRoute() {
 
 function renderAll() {
   renderWeekSelect();
+  renderShoppingWeekSelect();
   renderWeekRange();
   renderPrintWeekView();
-  renderSlotOptions(recipeSlotSelect, "Nur ins Kochbuch speichern");
-  renderSlotOptions(detailSlotSelect, "Slot waehlen");
+  renderSlotOptions(recipeSlotSelect, "Nur ins Kochbuch speichern", getRecipePickerDays());
+  renderSlotOptions(detailSlotSelect, "Slot wählen", getRecipePickerDays());
   renderWeek();
   renderCookbookCategories();
   renderPlannerModalCategories();
@@ -1621,12 +1794,21 @@ function renderAll() {
 copyButton.addEventListener("click", async () => {
   try {
     await navigator.clipboard.writeText(buildShoppingList());
-    copyFeedback.textContent = "In die Zwischenablage kopiert.";
+    copyFeedback.textContent = "Erfolgreich kopiert.";
     window.setTimeout(() => {
       copyFeedback.textContent = "";
     }, 2400);
   } catch (error) {
-    copyFeedback.textContent = "Kopieren nicht moeglich. Bitte Text manuell markieren.";
+    copyFeedback.textContent = "Kopieren gerade nicht möglich.";
+  }
+});
+printShoppingButton.addEventListener("click", () => {
+  try {
+    renderPrintShoppingView();
+    document.body.dataset.printView = "shopping";
+    window.print();
+  } catch (error) {
+    copyFeedback.textContent = "Drucken gerade nicht möglich.";
   }
 });
 
@@ -1648,8 +1830,13 @@ detailAddToWeekButton.addEventListener("click", () => {
     return;
   }
 
-  const [dayIndex, mealKey] = slotValue.split("-");
-  addRecipeToWeek(recipeId, Number(dayIndex), mealKey);
+  const separatorIndex = slotValue.lastIndexOf("::");
+  const dateKey = slotValue.slice(0, separatorIndex);
+  const mealKey = slotValue.slice(separatorIndex + 2);
+
+  if (dateKey && mealKey) {
+    addRecipeToDate(recipeId, dateKey, mealKey);
+  }
 });
 aiForm.addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -1680,9 +1867,20 @@ weekSelect.addEventListener("change", (event) => {
   saveState();
   renderAll();
 });
+shoppingWeekSelect.addEventListener("change", (event) => {
+  state.selectedShoppingWeekOffset = Number(event.target.value) || 0;
+  ensureShoppingWeekPlan();
+  saveState();
+  renderShoppingDayFilters();
+  renderShoppingList();
+});
 printWeekButton.addEventListener("click", () => {
   renderPrintWeekView();
+  document.body.dataset.printView = "week";
   window.print();
+});
+window.addEventListener("afterprint", () => {
+  delete document.body.dataset.printView;
 });
 shoppingDayFilters.addEventListener("click", (event) => {
   const filterButton = event.target.closest("[data-filter-type]");

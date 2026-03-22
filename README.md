@@ -5,7 +5,7 @@ Ein einfacher Wochenplaner mit Kochbuch, Einkaufsliste und KI-Rezeptgenerator.
 ## Voraussetzungen
 
 - [Node.js](https://nodejs.org/) installiert
-- Ein OpenAI API Key fuer den KI-Rezeptgenerator
+- Ein OpenAI API Key für den KI-Rezeptgenerator
 
 ## Lokale Einrichtung
 
@@ -18,7 +18,7 @@ Ein einfacher Wochenplaner mit Kochbuch, Einkaufsliste und KI-Rezeptgenerator.
    ```bash
    cp .env.example .env
    ```
-3. In `.env` den Wert fuer `OPENAI_API_KEY` setzen.
+3. In `.env` den Wert für `OPENAI_API_KEY` setzen.
 
 ## Projekt starten
 
@@ -30,6 +30,6 @@ Danach ist die App unter [http://localhost:4173](http://localhost:4173) erreichb
 
 ## Hinweise
 
-- Der kleine Node-Server liefert die Dateien aus und uebernimmt den OpenAI-API-Aufruf.
+- Der kleine Node-Server liefert die Dateien aus und übernimmt den OpenAI-API-Aufruf.
 - Eigene Rezepte und Wochenplaene werden aktuell nur im Browser per `localStorage` gespeichert.
 - Die Datei `.env` darf nicht ins Repository hochgeladen werden.

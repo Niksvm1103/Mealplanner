@@ -106,16 +106,16 @@ async function handleGenerateRecipe(req, res) {
   const style = String(body.style || "").trim();
 
   if (!prompt) {
-    sendJson(res, 400, { error: "Bitte gib Vorgaben fuer das Rezept an." });
+    sendJson(res, 400, { error: "Bitte gib Vorgaben für das Rezept an." });
     return;
   }
 
   const userPrompt = [
-    `Erstelle ein deutsches Rezept fuer folgenden Wunsch: ${prompt}.`,
+    `Erstelle ein deutsches Rezept für folgenden Wunsch: ${prompt}.`,
     `Portionen: ${servings}.`,
     style ? `Zusatzwunsch/Stil: ${style}.` : "",
-    "Gib realistische Naehrwerte pro Portion aus.",
-    "Ordne Zutaten passenden Einkaufs-Kategorien zu wie Gemuese, Obst, Fleisch und Fisch, Milchprodukte, Konserven, Trockenwaren, Oele und Saucen, Gewuerze oder Sonstiges.",
+    "Gib realistische Nährwerte pro Portion aus.",
+    "Ordne Zutaten passenden Einkaufs-Kategorien zu wie Gemüse, Obst, Fleisch und Fisch, Milchprodukte, Konserven, Trockenwaren, Öle und Saucen, Gewürze oder Sonstiges.",
     "Zeit im Format '30 Min'.",
     "Servings im Format '2 Personen'.",
     "Schreibe alles auf Deutsch."
@@ -173,7 +173,7 @@ async function handleGenerateRecipe(req, res) {
 
   const outputText = extractOutputText(payload);
   if (!outputText) {
-    sendJson(res, 502, { error: "Die KI hat kein lesbares Rezept zurueckgegeben." });
+    sendJson(res, 502, { error: "Die KI hat kein lesbares Rezept zurückgegeben." });
     return;
   }
 
@@ -236,7 +236,7 @@ function readJsonBody(req) {
       try {
         resolve(data ? JSON.parse(data) : {});
       } catch (error) {
-        reject(new Error("Request-Body ist kein gueltiges JSON."));
+        reject(new Error("Request-Body ist kein gültiges JSON."));
       }
     });
 
