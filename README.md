@@ -31,5 +31,6 @@ Danach ist die App unter [http://localhost:4173](http://localhost:4173) erreichb
 ## Hinweise
 
 - Der kleine Node-Server liefert die Dateien aus und übernimmt den OpenAI-API-Aufruf.
-- Eigene Rezepte und Wochenplaene werden aktuell nur im Browser per `localStorage` gespeichert.
+- Eigene Rezepte, Wochenplaene und Einkaufsauswahl werden jetzt serverseitig in `data/mahlzeit.db` per SQLite gespeichert.
+- Vorhandene Browser-Daten werden beim ersten Laden automatisch in die SQLite-Datenbank uebernommen.
 - Die Datei `.env` darf nicht ins Repository hochgeladen werden.

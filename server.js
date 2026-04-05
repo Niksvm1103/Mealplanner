@@ -2,11 +2,14 @@ const rootDir = __dirname;
 const http = require("http");
 const fs = require("fs");
 const path = require("path");
+const Database = require("better-sqlite3");
 
 loadDotEnv();
 
 const port = Number(process.env.PORT || 4173);
 const model = process.env.OPENAI_MODEL || "gpt-4.1-mini";
+const dataDir = path.join(rootDir, "data");
+const dbPath = path.join(dataDir, "mahlzeit.db");
 
 const mimeTypes = {
   ".html": "text/html; charset=utf-8",
@@ -70,10 +73,35 @@ const recipeSchema = {
   ]
 };
 
+const database = createDatabase();
+const selectStateStatement = database.prepare("SELECT value FROM app_state WHERE key = ?");
+const upsertStateStatement = database.prepare(`
+  INSERT INTO app_state (key, value, updated_at)
+  VALUES (@key, @value, @updatedAt)
+  ON CONFLICT(key) DO UPDATE SET
+    value = excluded.value,
+    updated_at = excluded.updated_at
+`);
+
 const server = http.createServer(async (req, res) => {
   try {
+    if (req.method === "GET" && req.url === "/api/state") {
+      handleGetState(res);
+      return;
+    }
+
+    if (req.method === "PUT" && req.url === "/api/state") {
+      await handlePutState(req, res);
+      return;
+    }
+
     if (req.method === "POST" && req.url === "/api/generate-recipe") {
       await handleGenerateRecipe(req, res);
+      return;
+    }
+
+    if (req.url.startsWith("/api/")) {
+      sendJson(res, 405, { error: "Methode nicht erlaubt." });
       return;
     }
 
@@ -188,6 +216,24 @@ async function handleGenerateRecipe(req, res) {
   sendJson(res, 200, { recipe });
 }
 
+function handleGetState(res) {
+  const savedState = readPersistedState();
+  sendJson(res, 200, { state: savedState });
+}
+
+async function handlePutState(req, res) {
+  const body = await readJsonBody(req);
+  const nextState = body?.state;
+
+  if (!nextState || typeof nextState !== "object" || Array.isArray(nextState)) {
+    sendJson(res, 400, { error: "Der App-State muss als Objekt gesendet werden." });
+    return;
+  }
+
+  writePersistedState(nextState);
+  sendJson(res, 200, { ok: true });
+}
+
 function serveStaticFile(req, res) {
   const requestPath = req.url === "/" ? "/index.html" : req.url.split("?")[0];
   const safePath = path.normalize(requestPath).replace(/^(\.\.[/\\])+/, "");
@@ -254,6 +300,41 @@ function extractOutputText(payload) {
   const firstOutput = payload.output?.[0];
   const firstContent = firstOutput?.content?.find((entry) => typeof entry.text === "string");
   return firstContent?.text || "";
+}
+
+function createDatabase() {
+  fs.mkdirSync(dataDir, { recursive: true });
+  const db = new Database(dbPath);
+  db.pragma("journal_mode = WAL");
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS app_state (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    )
+  `);
+  return db;
+}
+
+function readPersistedState() {
+  const row = selectStateStatement.get("default");
+  if (!row?.value) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(row.value);
+  } catch (error) {
+    throw new Error("Der gespeicherte App-State in SQLite ist ungültig.");
+  }
+}
+
+function writePersistedState(state) {
+  upsertStateStatement.run({
+    key: "default",
+    value: JSON.stringify(state),
+    updatedAt: new Date().toISOString()
+  });
 }
 
 function loadDotEnv() {

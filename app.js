@@ -254,14 +254,21 @@ const categoryOrder = [
 ];
 
 const state = {
-  recipes: [...baseRecipes],
+  recipes: baseRecipes.map(normaliseRecipe),
   customRecipeIds: [],
   selectedWeekOffset: 0,
   selectedShoppingWeekOffset: 0,
   dayPlans: {},
   selectedShoppingSlotIds: [],
-  shoppingSelectionWeekKeys: []
+  shoppingSelectionWeekKeys: [],
+  nutritionGoals: {
+    kcal: null,
+    fat: null,
+    protein: null,
+    carbs: null
+  }
 };
+let pendingStateSave = Promise.resolve();
 
 function createEmptyDayAssignment() {
   return {
@@ -403,89 +410,97 @@ function ensureWeekSeeded(offset = 0) {
   }
 }
 
-function loadState() {
-  const saved = window.localStorage.getItem(storageKey) || window.localStorage.getItem(legacyStorageKey);
+function resetState() {
+  state.recipes = baseRecipes.map(normaliseRecipe);
+  state.customRecipeIds = [];
+  state.selectedWeekOffset = 0;
+  state.selectedShoppingWeekOffset = 0;
+  state.dayPlans = {};
+  state.selectedShoppingSlotIds = [];
+  state.shoppingSelectionWeekKeys = [];
+  state.nutritionGoals = {
+    kcal: null,
+    fat: null,
+    protein: null,
+    carbs: null
+  };
+}
 
-  if (!saved) {
+function createStateSnapshot() {
+  return {
+    recipes: state.recipes,
+    customRecipeIds: state.customRecipeIds,
+    selectedWeekOffset: state.selectedWeekOffset,
+    selectedShoppingWeekOffset: state.selectedShoppingWeekOffset,
+    dayPlans: state.dayPlans,
+    selectedShoppingSlotIds: state.selectedShoppingSlotIds,
+    shoppingSelectionWeekKeys: state.shoppingSelectionWeekKeys,
+    nutritionGoals: state.nutritionGoals
+  };
+}
+
+function applyStoredState(parsed) {
+  resetState();
+
+  if (!parsed || typeof parsed !== "object") {
     ensureWeekSeeded(state.selectedWeekOffset || 0);
     ensureWeekSeeded(state.selectedShoppingWeekOffset || 0);
     return;
   }
 
-  try {
-    const parsed = JSON.parse(saved);
+  if (Array.isArray(parsed.recipes)) {
+    state.recipes = parsed.recipes.map(normaliseRecipe);
+  }
 
-    if (Array.isArray(parsed.recipes)) {
-      state.recipes = parsed.recipes;
-    }
+  if (!Array.isArray(parsed.recipes) && Array.isArray(parsed.customRecipes)) {
+    parsed.customRecipes.forEach((recipe) => state.recipes.push(normaliseRecipe(recipe)));
+    state.customRecipeIds = parsed.customRecipes.map((recipe) => recipe.id);
+  }
 
-    if (!Array.isArray(parsed.recipes) && Array.isArray(parsed.customRecipes)) {
-      parsed.customRecipes.forEach((recipe) => state.recipes.push(recipe));
-      state.customRecipeIds = parsed.customRecipes.map((recipe) => recipe.id);
-    }
+  if (Array.isArray(parsed.customRecipeIds)) {
+    state.customRecipeIds = parsed.customRecipeIds;
+  }
 
-    if (Array.isArray(parsed.customRecipeIds)) {
-      state.customRecipeIds = parsed.customRecipeIds;
-    }
+  if (Number.isInteger(parsed.selectedWeekOffset) && Number(parsed.selectedWeekOffset) >= 0) {
+    state.selectedWeekOffset = Number(parsed.selectedWeekOffset);
+  }
 
-    if (Number.isInteger(parsed.selectedWeekOffset) && Number(parsed.selectedWeekOffset) >= 0) {
-      state.selectedWeekOffset = Number(parsed.selectedWeekOffset);
-    }
+  if (Number.isInteger(parsed.selectedShoppingWeekOffset) && Number(parsed.selectedShoppingWeekOffset) >= 0) {
+    state.selectedShoppingWeekOffset = Number(parsed.selectedShoppingWeekOffset);
+  }
 
-    if (Number.isInteger(parsed.selectedShoppingWeekOffset) && Number(parsed.selectedShoppingWeekOffset) >= 0) {
-      state.selectedShoppingWeekOffset = Number(parsed.selectedShoppingWeekOffset);
-    }
+  if (parsed.dayPlans && typeof parsed.dayPlans === "object") {
+    Object.entries(parsed.dayPlans).forEach(([dateKey, assignment]) => {
+      state.dayPlans[dateKey] = normaliseDayAssignment(assignment);
+    });
+  }
 
-    if (parsed.dayPlans && typeof parsed.dayPlans === "object") {
-      Object.entries(parsed.dayPlans).forEach(([dateKey, assignment]) => {
-        state.dayPlans[dateKey] = normaliseDayAssignment(assignment);
-      });
-    }
+  if (Array.isArray(parsed.selectedShoppingSlotIds)) {
+    state.selectedShoppingSlotIds = [...new Set(parsed.selectedShoppingSlotIds)];
+  }
 
-    if (Array.isArray(parsed.selectedShoppingSlotIds)) {
-      state.selectedShoppingSlotIds = [...new Set(parsed.selectedShoppingSlotIds)];
-    }
+  if (Array.isArray(parsed.shoppingSelectionWeekKeys)) {
+    state.shoppingSelectionWeekKeys = [...new Set(parsed.shoppingSelectionWeekKeys)];
+  }
 
-    if (Array.isArray(parsed.shoppingSelectionWeekKeys)) {
-      state.shoppingSelectionWeekKeys = [...new Set(parsed.shoppingSelectionWeekKeys)];
-    }
+  if (parsed.nutritionGoals && typeof parsed.nutritionGoals === "object") {
+    state.nutritionGoals = normaliseNutritionGoals(parsed.nutritionGoals);
+  }
 
-    if (parsed.weekPlans && typeof parsed.weekPlans === "object") {
-      Object.entries(parsed.weekPlans).forEach(([weekKey, weekPlan]) => {
-        const assignments = Array.isArray(weekPlan?.weekAssignments) ? weekPlan.weekAssignments : [];
-        const selectedShoppingSlots = Array.isArray(weekPlan?.selectedShoppingSlots)
-          ? weekPlan.selectedShoppingSlots
-          : Array.isArray(weekPlan?.selectedShoppingDays)
-            ? weekPlan.selectedShoppingDays.flatMap((dayIndex) => mealSlots.map((slot) => `${dayIndex}-${slot.key}`))
-            : [];
-        const startDate = new Date(`${weekKey}T00:00:00`);
-        const weekDays = getWeekDaysForStart(startDate).slice(0, assignments.length);
-
-        weekDays.forEach(({ dateKey }, index) => {
-          state.dayPlans[dateKey] = normaliseDayAssignment(assignments[index]);
-        });
-
-        selectedShoppingSlots.forEach((slotId) => {
-          const [legacyDayIndex, mealKey] = String(slotId).split("-");
-          const dayIndex = Number(legacyDayIndex);
-          const weekDay = weekDays[dayIndex];
-          if (weekDay && mealKey) {
-            state.selectedShoppingSlotIds.push(getSlotId(weekDay.dateKey, mealKey));
-          }
-        });
-      });
-    } else if (Array.isArray(parsed.weekAssignments)) {
-      const weekDays = getWeekDaysForStart(getPlanningWeekStart()).slice(0, parsed.weekAssignments.length);
+  if (parsed.weekPlans && typeof parsed.weekPlans === "object") {
+    Object.entries(parsed.weekPlans).forEach(([weekKey, weekPlan]) => {
+      const assignments = Array.isArray(weekPlan?.weekAssignments) ? weekPlan.weekAssignments : [];
+      const selectedShoppingSlots = Array.isArray(weekPlan?.selectedShoppingSlots)
+        ? weekPlan.selectedShoppingSlots
+        : Array.isArray(weekPlan?.selectedShoppingDays)
+          ? weekPlan.selectedShoppingDays.flatMap((dayIndex) => mealSlots.map((slot) => `${dayIndex}-${slot.key}`))
+          : [];
+      const startDate = new Date(`${weekKey}T00:00:00`);
+      const weekDays = getWeekDaysForStart(startDate).slice(0, assignments.length);
 
       weekDays.forEach(({ dateKey }, index) => {
-        state.dayPlans[dateKey] = normaliseDayAssignment(parsed.weekAssignments[index]);
+        state.dayPlans[dateKey] = normaliseDayAssignment(assignments[index]);
       });
-
-      const selectedShoppingSlots = Array.isArray(parsed.selectedShoppingSlots)
-        ? parsed.selectedShoppingSlots
-        : Array.isArray(parsed.selectedShoppingDays)
-          ? parsed.selectedShoppingDays.flatMap((dayIndex) => mealSlots.map((slot) => `${dayIndex}-${slot.key}`))
-          : [];
 
       selectedShoppingSlots.forEach((slotId) => {
         const [legacyDayIndex, mealKey] = String(slotId).split("-");
@@ -495,10 +510,28 @@ function loadState() {
           state.selectedShoppingSlotIds.push(getSlotId(weekDay.dateKey, mealKey));
         }
       });
-    }
-  } catch (error) {
-    window.localStorage.removeItem(storageKey);
-    window.localStorage.removeItem(legacyStorageKey);
+    });
+  } else if (Array.isArray(parsed.weekAssignments)) {
+    const weekDays = getWeekDaysForStart(getPlanningWeekStart()).slice(0, parsed.weekAssignments.length);
+
+    weekDays.forEach(({ dateKey }, index) => {
+      state.dayPlans[dateKey] = normaliseDayAssignment(parsed.weekAssignments[index]);
+    });
+
+    const selectedShoppingSlots = Array.isArray(parsed.selectedShoppingSlots)
+      ? parsed.selectedShoppingSlots
+      : Array.isArray(parsed.selectedShoppingDays)
+        ? parsed.selectedShoppingDays.flatMap((dayIndex) => mealSlots.map((slot) => `${dayIndex}-${slot.key}`))
+        : [];
+
+    selectedShoppingSlots.forEach((slotId) => {
+      const [legacyDayIndex, mealKey] = String(slotId).split("-");
+      const dayIndex = Number(legacyDayIndex);
+      const weekDay = weekDays[dayIndex];
+      if (weekDay && mealKey) {
+        state.selectedShoppingSlotIds.push(getSlotId(weekDay.dateKey, mealKey));
+      }
+    });
   }
 
   state.selectedShoppingSlotIds = [...new Set(state.selectedShoppingSlotIds)];
@@ -506,19 +539,107 @@ function loadState() {
   ensureWeekSeeded(state.selectedShoppingWeekOffset || 0);
 }
 
+function readLegacyLocalState() {
+  const saved = window.localStorage.getItem(storageKey) || window.localStorage.getItem(legacyStorageKey);
+  if (!saved) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(saved);
+  } catch (error) {
+    window.localStorage.removeItem(storageKey);
+    window.localStorage.removeItem(legacyStorageKey);
+    return null;
+  }
+}
+
+function shouldPreferLegacyState(serverState, legacyState) {
+  const serverCustomCount = Array.isArray(serverState?.customRecipeIds) ? serverState.customRecipeIds.length : 0;
+  const legacyCustomCount = Array.isArray(legacyState?.customRecipeIds) ? legacyState.customRecipeIds.length : 0;
+  const serverRecipeCount = Array.isArray(serverState?.recipes) ? serverState.recipes.length : 0;
+  const legacyRecipeCount = Array.isArray(legacyState?.recipes) ? legacyState.recipes.length : 0;
+
+  if (legacyCustomCount > serverCustomCount) {
+    return true;
+  }
+
+  if (serverCustomCount === 0 && legacyCustomCount === 0 && legacyRecipeCount > serverRecipeCount) {
+    return true;
+  }
+
+  return false;
+}
+
+async function loadState() {
+  const legacyState = readLegacyLocalState();
+
+  try {
+    const response = await fetch("/api/state");
+    const payload = await response.json();
+
+    if (!response.ok) {
+      throw new Error(payload.error || "App-State konnte nicht geladen werden.");
+    }
+
+    if (payload.state && typeof payload.state === "object") {
+      const resolvedState = shouldPreferLegacyState(payload.state, legacyState) ? legacyState : payload.state;
+      applyStoredState(resolvedState);
+
+      if (resolvedState === legacyState) {
+        saveState();
+      }
+
+      return;
+    }
+  } catch (error) {
+    console.error("State konnte nicht vom Server geladen werden.", error);
+  }
+
+  if (legacyState) {
+    applyStoredState(legacyState);
+    saveState();
+    return;
+  }
+
+  resetState();
+  ensureWeekSeeded(state.selectedWeekOffset || 0);
+  ensureWeekSeeded(state.selectedShoppingWeekOffset || 0);
+}
+
 function saveState() {
-  window.localStorage.setItem(
-    storageKey,
-    JSON.stringify({
-      recipes: state.recipes,
-      customRecipeIds: state.customRecipeIds,
-      selectedWeekOffset: state.selectedWeekOffset,
-      selectedShoppingWeekOffset: state.selectedShoppingWeekOffset,
-      dayPlans: state.dayPlans,
-      selectedShoppingSlotIds: state.selectedShoppingSlotIds,
-      shoppingSelectionWeekKeys: state.shoppingSelectionWeekKeys
+  const serializedState = JSON.stringify(createStateSnapshot());
+  window.localStorage.setItem(storageKey, serializedState);
+
+  pendingStateSave = pendingStateSave
+    .catch(() => {})
+    .then(async () => {
+      const response = await fetch("/api/state", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ state: JSON.parse(serializedState) })
+      });
+
+      if (!response.ok) {
+        let message = "App-State konnte nicht gespeichert werden.";
+
+        try {
+          const payload = await response.json();
+          message = payload.error || message;
+        } catch (error) {
+          // Ignore JSON parsing issues and keep generic message.
+        }
+
+        throw new Error(message);
+      }
     })
-  );
+    .catch((error) => {
+      console.error("State konnte nicht auf dem Server gespeichert werden.", error);
+    });
+
+  return pendingStateSave;
 }
 
 function recipeMap() {
@@ -589,12 +710,19 @@ const editRecipeButton = document.querySelector("#edit-recipe-button");
 const deleteRecipeButton = document.querySelector("#delete-recipe-button");
 const detailSlotSelect = document.querySelector("#detail-slot-select");
 const detailAddToWeekButton = document.querySelector("#detail-add-to-week");
+const detailRatingEditor = document.querySelector("#detail-rating-editor");
+const detailRatingSummary = document.querySelector("#detail-rating-summary");
+const detailNotesInput = document.querySelector("#detail-notes");
 const weekRange = document.querySelector("#week-range");
 const weekSelect = document.querySelector("#week-select");
 const printWeekButton = document.querySelector("#print-week-button");
+const printWeekConfirmButton = document.querySelector("#print-week-confirm");
+const printWeekCloseButton = document.querySelector("#print-week-close");
 const printWeekRange = document.querySelector("#print-week-range");
 const printWeekHeadings = document.querySelector("#print-week-headings");
 const printWeekBody = document.querySelector("#print-week-body");
+const printShoppingConfirmButton = document.querySelector("#print-shopping-confirm");
+const printShoppingCloseButton = document.querySelector("#print-shopping-close");
 const printShoppingRange = document.querySelector("#print-shopping-range");
 const printShoppingBody = document.querySelector("#print-shopping-body");
 const versionCounter = document.querySelector("#version-counter");
@@ -622,6 +750,15 @@ const plannerModalCategory = document.querySelector("#planner-modal-category");
 const plannerModalSort = document.querySelector("#planner-modal-sort");
 const plannerModalMealprepOnly = document.querySelector("#planner-modal-mealprep-only");
 const plannerModalList = document.querySelector("#planner-modal-list");
+const profileModal = document.querySelector("#profile-modal");
+const openProfileButton = document.querySelector("#open-profile-button");
+const closeProfileButton = document.querySelector("#close-profile-button");
+const profileForm = document.querySelector("#profile-form");
+const resetProfileButton = document.querySelector("#reset-profile-button");
+const profileKcalInput = document.querySelector("#profile-kcal");
+const profileFatInput = document.querySelector("#profile-fat");
+const profileProteinInput = document.querySelector("#profile-protein");
+const profileCarbsInput = document.querySelector("#profile-carbs");
 
 let latestGeneratedRecipe = null;
 let editingRecipeId = null;
@@ -708,38 +845,8 @@ function renderPrintWeekView() {
 }
 
 function renderPrintShoppingView() {
-  const recipesById = recipeMap();
   const weekDays = getShoppingWeekDays();
-  const weekPlan = ensureShoppingWeekPlan();
-  const grouped = new Map();
-
-  categoryOrder.forEach((category) => grouped.set(category, []));
-
-  weekPlan.weekAssignments.forEach((assignment, dayIndex) => {
-    mealSlots.forEach((slot) => {
-      const slotId = getSlotId(weekDays[dayIndex].dateKey, slot.key);
-      if (!weekPlan.selectedShoppingSlots.includes(slotId)) {
-        return;
-      }
-
-      const mealEntry = assignment[slot.key];
-      const recipeId = mealEntry.recipeId;
-      if (!recipeId || mealEntry.skipShopping) {
-        return;
-      }
-
-      const recipe = recipesById.get(recipeId);
-      if (!recipe) {
-        return;
-      }
-
-      recipe.ingredients.forEach((ingredient) => {
-        const category = grouped.has(ingredient.category) ? ingredient.category : "Sonstiges";
-        grouped.get(category).push(scaleIngredientText(ingredient.item, mealEntry.factor));
-      });
-    });
-  });
-
+  const grouped = collectShoppingItemsByCategory();
   const categorySections = [...grouped.entries()].filter(([, items]) => items.length > 0);
 
   printShoppingRange.textContent = `${formatLongDate(weekDays[0].date)} bis ${formatLongDate(weekDays[planningWindowDays - 1].date)}`;
@@ -749,10 +856,7 @@ function renderPrintShoppingView() {
         <section class="print-shopping-section">
           <h2>${category}</h2>
           <div class="print-shopping-items">
-            ${items
-              .sort((a, b) => a.localeCompare(b, "de"))
-              .map((item) => `<div class="print-shopping-item">${item}</div>`)
-              .join("")}
+            ${items.map((item) => `<div class="print-shopping-item">${item}</div>`).join("")}
           </div>
         </section>
       `
@@ -764,7 +868,9 @@ function incrementVersionCounter() {
   const savedCount = Number(window.localStorage.getItem(versionCounterKey) || "0");
   const nextCount = savedCount + 1;
   window.localStorage.setItem(versionCounterKey, String(nextCount));
-  versionCounter.textContent = `Version ${nextCount}`;
+  if (versionCounter) {
+    versionCounter.textContent = `Version ${nextCount}`;
+  }
 }
 
 function renderSlotOptions(selectElement, emptyLabel, days = getSelectedWeekDays()) {
@@ -840,6 +946,63 @@ function formatNutritionTotal(value, unit = "") {
   return unit ? `${displayValue} ${unit}` : displayValue;
 }
 
+function parseGoalNumber(value) {
+  if (value === null || value === undefined || value === "") {
+    return null;
+  }
+
+  const number = Number(String(value).replace(",", "."));
+  if (!Number.isFinite(number) || number < 0) {
+    return null;
+  }
+
+  return Number(number.toFixed(1));
+}
+
+function normaliseNutritionGoals(goals = {}) {
+  return {
+    kcal: parseGoalNumber(goals.kcal),
+    fat: parseGoalNumber(goals.fat),
+    protein: parseGoalNumber(goals.protein),
+    carbs: parseGoalNumber(goals.carbs)
+  };
+}
+
+function formatGoalInputValue(value) {
+  return value === null ? "" : String(value);
+}
+
+function getNutritionGoalStatus(metricKey, totalValue, goalValue) {
+  if (goalValue === null) {
+    return null;
+  }
+
+  const isMet = metricKey === "protein" ? totalValue >= goalValue : totalValue <= goalValue;
+
+  return { isMet };
+}
+
+function renderNutritionGoalComparison(metricKey, shortLabel, totalValue, goalValue, unit = "") {
+  const status = getNutritionGoalStatus(metricKey, totalValue, goalValue);
+
+  if (!status) {
+    return `
+      <span class="week-day-nutrition-item week-day-nutrition-item-goal is-unset">
+        <span class="nutrition-chip-label">${shortLabel}</span>
+        <strong>${formatNutritionTotal(totalValue, unit)}</strong>
+      </span>
+    `;
+  }
+
+  return `
+    <span class="week-day-nutrition-item week-day-nutrition-item-goal ${status.isMet ? "is-met" : "is-over"}">
+      <span class="nutrition-chip-label">${shortLabel}</span>
+      <strong>${formatNutritionTotal(totalValue, unit)}</strong>
+      <span class="nutrition-goal-text">Ziel: ${formatNutritionTotal(goalValue, unit)}</span>
+    </span>
+  `;
+}
+
 function getDayNutritionTotals(dayAssignment, recipesById) {
   return mealSlots.reduce(
     (totals, slot) => {
@@ -885,8 +1048,224 @@ function scaleIngredientText(text, factor) {
   return `${prettyNumber}${match[2] || ""}${match[3] || ""}`.trim();
 }
 
-function normaliseGeneratedRecipe(recipe, idPrefix = "custom") {
+const aggregateUnitAliases = new Map([
+  ["g", "g"],
+  ["gramm", "g"],
+  ["kg", "kg"],
+  ["kilogramm", "kg"],
+  ["ml", "ml"],
+  ["milliliter", "ml"],
+  ["l", "l"],
+  ["liter", "l"],
+  ["el", "EL"],
+  ["tl", "TL"],
+  ["stück", "Stueck"],
+  ["stk", "Stueck"],
+  ["bund", "Bund"],
+  ["dose", "Dose"],
+  ["dosen", "Dose"],
+  ["packung", "Packung"],
+  ["packungen", "Packung"],
+  ["block", "Block"],
+  ["blöcke", "Block"],
+  ["bloecke", "Block"],
+  ["scheibe", "Scheibe"],
+  ["scheiben", "Scheibe"],
+  ["zehe", "Zehe"],
+  ["zehen", "Zehe"]
+]);
+
+const aggregateDisplayUnits = {
+  g: { singular: "g", plural: "g" },
+  ml: { singular: "ml", plural: "ml" },
+  EL: { singular: "EL", plural: "EL" },
+  TL: { singular: "TL", plural: "TL" },
+  Stueck: { singular: "Stück", plural: "Stück" },
+  Bund: { singular: "Bund", plural: "Bund" },
+  Dose: { singular: "Dose", plural: "Dosen" },
+  Packung: { singular: "Packung", plural: "Packungen" },
+  Block: { singular: "Block", plural: "Blöcke" },
+  Scheibe: { singular: "Scheibe", plural: "Scheiben" },
+  Zehe: { singular: "Zehe", plural: "Zehen" }
+};
+
+function formatAggregateNumber(value) {
+  const roundedValue = Number(value.toFixed(2));
+  return Number.isInteger(roundedValue) ? String(roundedValue) : String(roundedValue).replace(".", ",");
+}
+
+function normaliseAggregateUnit(unit) {
+  const cleanedUnit = String(unit || "")
+    .trim()
+    .toLowerCase()
+    .replace(/\.$/, "");
+  return aggregateUnitAliases.get(cleanedUnit) || null;
+}
+
+function parseAggregatableIngredient(text, factor = 1) {
+  const trimmed = String(text).trim();
+  const match = trimmed.match(/^(\d+(?:[.,]\d+)?)(?:\s*([\p{L}.]+))?(?:\s+(.+))?$/u);
+  if (!match) {
+    return null;
+  }
+
+  const baseAmount = Number(match[1].replace(",", "."));
+  if (!Number.isFinite(baseAmount)) {
+    return null;
+  }
+
+  const possibleUnit = match[2] || "";
+  const remainder = (match[3] || "").trim();
+  const normalisedUnit = normaliseAggregateUnit(possibleUnit);
+
+  if (normalisedUnit) {
+    if (!remainder) {
+      return null;
+    }
+
+    if (normalisedUnit === "kg") {
+      return {
+        amount: baseAmount * factor * 1000,
+        unit: "g",
+        name: remainder,
+        key: `g|${remainder.toLocaleLowerCase("de")}`
+      };
+    }
+
+    if (normalisedUnit === "l") {
+      return {
+        amount: baseAmount * factor * 1000,
+        unit: "ml",
+        name: remainder,
+        key: `ml|${remainder.toLocaleLowerCase("de")}`
+      };
+    }
+
+    return {
+      amount: baseAmount * factor,
+      unit: normalisedUnit,
+      name: remainder,
+      key: `${normalisedUnit}|${remainder.toLocaleLowerCase("de")}`
+    };
+  }
+
+  const inferredName = `${possibleUnit}${possibleUnit && remainder ? " " : ""}${remainder}`.trim();
+  if (!inferredName) {
+    return null;
+  }
+
   return {
+    amount: baseAmount * factor,
+    unit: "",
+    name: inferredName,
+    key: `count|${inferredName.toLocaleLowerCase("de")}`
+  };
+}
+
+function formatAggregatedIngredient(entry) {
+  const amountText = formatAggregateNumber(entry.amount);
+  const sourceText = entry.sources.length ? ` (${entry.sources.join("; ")})` : "";
+  if (!entry.unit) {
+    return `${`${amountText} ${entry.name}`.trim()}${sourceText}`;
+  }
+
+  const unitLabel = aggregateDisplayUnits[entry.unit] || {
+    singular: entry.unit,
+    plural: entry.unit
+  };
+  const unitText = Number(entry.amount) === 1 ? unitLabel.singular : unitLabel.plural;
+  return `${`${amountText} ${unitText} ${entry.name}`.trim()}${sourceText}`;
+}
+
+function formatShoppingSource(dayLabel, slotLabel, recipeTitle, factor) {
+  const shortDayLabel =
+    {
+      Montag: "Mo",
+      Dienstag: "Di",
+      Mittwoch: "Mi",
+      Donnerstag: "Do",
+      Freitag: "Fr",
+      Samstag: "Sa",
+      Sonntag: "So"
+    }[dayLabel] || dayLabel;
+  const shortSlotLabel =
+    {
+      Frühstück: "Morgens",
+      Mittagessen: "Mittags",
+      Abendessen: "Abends"
+    }[slotLabel] || slotLabel;
+
+  return `${shortDayLabel} ${shortSlotLabel}: ${recipeTitle} (${formatFactorLabel(factor)})`;
+}
+
+function collectShoppingItemsByCategory() {
+  const recipesById = recipeMap();
+  const weekDays = getShoppingWeekDays();
+  const weekPlan = ensureShoppingWeekPlan();
+  const grouped = new Map();
+
+  categoryOrder.forEach((category) => {
+    grouped.set(category, { aggregated: new Map(), plain: [] });
+  });
+
+  weekPlan.weekAssignments.forEach((assignment, dayIndex) => {
+    mealSlots.forEach((slot) => {
+      const slotId = getSlotId(weekDays[dayIndex].dateKey, slot.key);
+      if (!weekPlan.selectedShoppingSlots.includes(slotId)) {
+        return;
+      }
+
+      const mealEntry = assignment[slot.key];
+      const recipeId = mealEntry.recipeId;
+      if (!recipeId || mealEntry.skipShopping) {
+        return;
+      }
+
+      const recipe = recipesById.get(recipeId);
+      if (!recipe) {
+        return;
+      }
+
+      const source = formatShoppingSource(weekDays[dayIndex].day, slot.label, recipe.title, mealEntry.factor);
+
+      recipe.ingredients.forEach((ingredient) => {
+        const category = grouped.has(ingredient.category) ? ingredient.category : "Sonstiges";
+        const targetGroup = grouped.get(category);
+        const parsedIngredient = parseAggregatableIngredient(ingredient.item, mealEntry.factor);
+
+        if (!parsedIngredient) {
+          targetGroup.plain.push(`${scaleIngredientText(ingredient.item, mealEntry.factor)} (${source})`);
+          return;
+        }
+
+        const existing = targetGroup.aggregated.get(parsedIngredient.key);
+        if (existing) {
+          existing.amount += parsedIngredient.amount;
+          if (!existing.sources.includes(source)) {
+            existing.sources.push(source);
+          }
+          return;
+        }
+
+        targetGroup.aggregated.set(parsedIngredient.key, { ...parsedIngredient, sources: [source] });
+      });
+    });
+  });
+
+  return new Map(
+    [...grouped.entries()].map(([category, entry]) => {
+      const items = [
+        ...[...entry.aggregated.values()].map(formatAggregatedIngredient),
+        ...entry.plain
+      ].sort((a, b) => a.localeCompare(b, "de"));
+
+      return [category, items];
+    })
+  );
+}
+
+function normaliseGeneratedRecipe(recipe, idPrefix = "custom") {
+  return normaliseRecipe({
     id: `${idPrefix}-${Date.now()}-${slugify(recipe.title || "rezept")}`,
     title: String(recipe.title || "Neues Rezept").trim(),
     category: String(recipe.category || "KI-Rezept").trim(),
@@ -915,7 +1294,67 @@ function normaliseGeneratedRecipe(recipe, idPrefix = "custom") {
     tags: Array.isArray(recipe.tags)
       ? recipe.tags.map((tag) => String(tag).trim()).filter(Boolean)
       : ["KI-Rezept"]
+  });
+}
+
+function normaliseRecipeRating(value) {
+  const rating = Number(value);
+  if (!Number.isFinite(rating)) {
+    return 0;
+  }
+
+  return Math.min(5, Math.max(0, Math.round(rating)));
+}
+
+function normaliseRecipeNotes(value) {
+  return String(value || "").trim();
+}
+
+function normaliseRecipe(recipe) {
+  return {
+    ...recipe,
+    rating: normaliseRecipeRating(recipe?.rating),
+    notes: normaliseRecipeNotes(recipe?.notes)
   };
+}
+
+function renderRatingStars(rating, options = {}) {
+  const roundedRating = normaliseRecipeRating(rating);
+  const interactive = Boolean(options.interactive);
+  const className = options.className || "rating-stars";
+  const ariaLabel = interactive ? "Rezeptbewertung" : `Bewertung: ${roundedRating || 0} von 5 Sternen`;
+
+  return `
+    <div class="${className}" ${interactive ? 'role="radiogroup"' : ""} aria-label="${ariaLabel}">
+      ${[1, 2, 3, 4, 5]
+        .map((starValue) => {
+          const filled = starValue <= roundedRating;
+          if (!interactive) {
+            return `<span class="rating-star ${filled ? "is-active" : ""}" aria-hidden="true">${filled ? "★" : "☆"}</span>`;
+          }
+
+          return `
+            <button
+              class="rating-star-button ${filled ? "is-active" : ""}"
+              type="button"
+              data-rating-value="${starValue}"
+              role="radio"
+              aria-checked="${filled && roundedRating === starValue ? "true" : "false"}"
+              aria-label="${starValue} ${starValue === 1 ? "Stern" : "Sterne"}"
+              title="${starValue} ${starValue === 1 ? "Stern" : "Sterne"}"
+            >
+              ★
+            </button>
+          `;
+        })
+        .join("")}
+    </div>
+  `;
+}
+
+function getRecipeRatingLabel(recipe) {
+  const rating = normaliseRecipeRating(recipe?.rating);
+  return rating > 0 ? `${rating}/5 Sterne` : "Noch nicht bewertet";
 }
 
 function renderWeek() {
@@ -934,10 +1373,10 @@ function renderWeek() {
             <p class="day-date">${formatShortDate(date)}</p>
           </div>
           <div class="week-day-nutrition" aria-label="Tageswerte">
-            <span class="week-day-nutrition-item"><span class="nutrition-chip-label">kcal</span><strong>${formatNutritionTotal(dayNutritionTotals.kcal)}</strong></span>
-            <span class="week-day-nutrition-item"><span class="nutrition-chip-label">F</span><strong>${formatNutritionTotal(dayNutritionTotals.fat, "g")}</strong></span>
-            <span class="week-day-nutrition-item"><span class="nutrition-chip-label">P</span><strong>${formatNutritionTotal(dayNutritionTotals.protein, "g")}</strong></span>
-            <span class="week-day-nutrition-item"><span class="nutrition-chip-label">KH</span><strong>${formatNutritionTotal(dayNutritionTotals.carbs, "g")}</strong></span>
+            ${renderNutritionGoalComparison("kcal", "kcal", dayNutritionTotals.kcal, state.nutritionGoals.kcal)}
+            ${renderNutritionGoalComparison("fat", "F", dayNutritionTotals.fat, state.nutritionGoals.fat, "g")}
+            ${renderNutritionGoalComparison("protein", "P", dayNutritionTotals.protein, state.nutritionGoals.protein, "g")}
+            ${renderNutritionGoalComparison("carbs", "KH", dayNutritionTotals.carbs, state.nutritionGoals.carbs, "g")}
           </div>
           <div class="meal-slot-list">
             ${mealSlots
@@ -978,7 +1417,6 @@ function renderWeek() {
                       ${mealEntry.skipShopping ? '<span class="pill">Schon eingeplant</span>' : ""}
                     </div>
                     <div class="meal-factor-row">
-                      <label class="meal-factor-label" for="meal-factor-${index}-${slot.key}">Portionen</label>
                       <select
                         id="meal-factor-${index}-${slot.key}"
                         class="add-select meal-factor-select"
@@ -1032,6 +1470,7 @@ function archiveMatches(recipe, term) {
     recipe.title,
     recipe.category,
     recipe.description,
+    recipe.notes || "",
     ...recipe.tags,
     ...recipe.ingredients.map((ingredient) => ingredient.item)
   ]
@@ -1065,6 +1504,9 @@ function renderCookbook() {
           ${recipe.image ? `<img class="cookbook-image" src="${recipe.image}" alt="${recipe.title}" loading="lazy" />` : ""}
           <p class="archive-week">${recipe.category}</p>
           <h3>${recipe.title}</h3>
+          <div class="recipe-rating-row">
+            ${renderRatingStars(recipe.rating)}
+          </div>
           <div class="archive-tags">
             <span class="pill">${recipe.time}</span>
             <span class="pill">${recipe.servings}</span>
@@ -1095,6 +1537,16 @@ function parseRecipeTimeToMinutes(timeLabel) {
 }
 
 function compareRecipes(recipeA, recipeB, sortMode) {
+  if (sortMode === "rating-asc") {
+    return normaliseRecipeRating(recipeA.rating) - normaliseRecipeRating(recipeB.rating) ||
+      recipeA.title.localeCompare(recipeB.title, "de");
+  }
+
+  if (sortMode === "rating-desc") {
+    return normaliseRecipeRating(recipeB.rating) - normaliseRecipeRating(recipeA.rating) ||
+      recipeA.title.localeCompare(recipeB.title, "de");
+  }
+
   if (sortMode === "title-desc") {
     return recipeB.title.localeCompare(recipeA.title, "de");
   }
@@ -1223,6 +1675,9 @@ function renderPlannerModalRecipes() {
         <article class="modal-recipe-card">
           <p class="archive-week">${recipe.category}</p>
           <h3>${recipe.title}</h3>
+          <div class="recipe-rating-row">
+            ${renderRatingStars(recipe.rating)}
+          </div>
           <div class="archive-tags">
             <span class="pill">${recipe.time}</span>
             <span class="pill">${recipe.servings}</span>
@@ -1270,46 +1725,50 @@ function closePlannerModal() {
   plannerModal.setAttribute("aria-hidden", "true");
 }
 
-function buildShoppingList() {
-  const recipesById = recipeMap();
-  const weekDays = getShoppingWeekDays();
-  const weekPlan = ensureShoppingWeekPlan();
-  const grouped = new Map();
+function syncProfileForm() {
+  profileKcalInput.value = formatGoalInputValue(state.nutritionGoals.kcal);
+  profileFatInput.value = formatGoalInputValue(state.nutritionGoals.fat);
+  profileProteinInput.value = formatGoalInputValue(state.nutritionGoals.protein);
+  profileCarbsInput.value = formatGoalInputValue(state.nutritionGoals.carbs);
+}
 
-  categoryOrder.forEach((category) => grouped.set(category, []));
+function openProfileModal() {
+  syncProfileForm();
+  profileModal.classList.remove("hidden");
+  profileModal.setAttribute("aria-hidden", "false");
+  profileKcalInput.focus();
+}
 
-  weekPlan.weekAssignments.forEach((assignment, dayIndex) => {
-    mealSlots.forEach((slot) => {
-      const slotId = getSlotId(weekDays[dayIndex].dateKey, slot.key);
-      if (!weekPlan.selectedShoppingSlots.includes(slotId)) {
-        return;
-      }
+function closeProfileModal() {
+  profileModal.classList.add("hidden");
+  profileModal.setAttribute("aria-hidden", "true");
+}
 
-      const mealEntry = assignment[slot.key];
-      const recipeId = mealEntry.recipeId;
-      if (!recipeId || mealEntry.skipShopping) {
-        return;
-      }
-
-      const recipe = recipesById.get(recipeId);
-      if (!recipe) {
-        return;
-      }
-
-      recipe.ingredients.forEach((ingredient) => {
-        const category = grouped.has(ingredient.category) ? ingredient.category : "Sonstiges";
-        grouped
-          .get(category)
-          .push(
-            `${scaleIngredientText(ingredient.item, mealEntry.factor)} (${weekDays[dayIndex].day} ${slot.label}: ${recipe.title}, ${formatFactorLabel(mealEntry.factor)})`
-          );
-      });
-    });
+function saveNutritionGoals(event) {
+  event.preventDefault();
+  state.nutritionGoals = normaliseNutritionGoals({
+    kcal: profileKcalInput.value,
+    fat: profileFatInput.value,
+    protein: profileProteinInput.value,
+    carbs: profileCarbsInput.value
   });
+  saveState();
+  renderWeek();
+  closeProfileModal();
+}
 
+function resetNutritionGoals() {
+  state.nutritionGoals = normaliseNutritionGoals();
+  syncProfileForm();
+  saveState();
+  renderWeek();
+}
+
+function buildShoppingList() {
+  const weekDays = getShoppingWeekDays();
+  const grouped = collectShoppingItemsByCategory();
   const categorySections = [...grouped.entries()]
-    .filter(([, items]) => items.length > 0)
-    .map(([category, items]) => [category, items.sort((a, b) => a.localeCompare(b, "de"))]);
+    .filter(([, items]) => items.length > 0);
 
   return [
     `Einkaufsliste für ${formatLongDate(weekDays[0].date)} bis ${formatLongDate(weekDays[planningWindowDays - 1].date)}`,
@@ -1387,6 +1846,8 @@ function toggleShoppingFilter(filterType, value) {
 function openRecipeForm(slotValue = "") {
   editingRecipeId = null;
   recipeForm.reset();
+  document.querySelector("#recipe-rating").value = "0";
+  document.querySelector("#recipe-notes").value = "";
   recipeSubmitButton.textContent = "Rezept speichern";
   document.querySelector("#recipe-form-panel h2").textContent = "Neues Rezept anlegen";
   recipeFormPanel.classList.remove("hidden");
@@ -1396,6 +1857,8 @@ function openRecipeForm(slotValue = "") {
 
 function closeRecipeForm() {
   recipeForm.reset();
+  document.querySelector("#recipe-rating").value = "0";
+  document.querySelector("#recipe-notes").value = "";
   recipeSlotSelect.value = "";
   editingRecipeId = null;
   recipeSubmitButton.textContent = "Rezept speichern";
@@ -1414,6 +1877,14 @@ function renderRecipeDetail(recipeId) {
   document.querySelector("#detail-tag").textContent = recipe.category;
   document.querySelector("#detail-time").textContent = recipe.time;
   document.querySelector("#detail-servings").textContent = recipe.servings;
+  detailRatingEditor.innerHTML = renderRatingStars(recipe.rating, {
+    interactive: true,
+    className: "rating-stars rating-stars-editor"
+  });
+  detailRatingEditor.dataset.recipeId = recipe.id;
+  detailRatingEditor.dataset.currentRating = String(normaliseRecipeRating(recipe.rating));
+  detailRatingSummary.textContent = getRecipeRatingLabel(recipe);
+  detailNotesInput.value = recipe.notes || "";
   document.querySelector("#detail-nutrition").innerHTML = [
     ["kcal", recipe.nutrition.kcal],
     ["F", recipe.nutrition.fat],
@@ -1561,7 +2032,36 @@ function fillRecipeForm(recipe) {
   document.querySelector("#recipe-ingredients").value = recipe.ingredients
     .map((ingredient) => `[${ingredient.category}] ${ingredient.item}`)
     .join("\n");
+  document.querySelector("#recipe-rating").value = String(normaliseRecipeRating(recipe.rating));
+  document.querySelector("#recipe-notes").value = recipe.notes || "";
   recipeMealprepCheckbox.checked = Boolean(recipe.mealprep);
+}
+
+function updateRecipeReview(recipeId, updates = {}) {
+  let nextRecipe = null;
+  state.recipes = state.recipes.map((recipe) => {
+    if (recipe.id !== recipeId) {
+      return recipe;
+    }
+
+    nextRecipe = normaliseRecipe({
+      ...recipe,
+      ...updates
+    });
+    return nextRecipe;
+  });
+
+  if (!nextRecipe) {
+    return;
+  }
+
+  saveState();
+  renderCookbook();
+  renderPlannerModalRecipes();
+
+  if (window.location.hash === `#rezept/${recipeId}`) {
+    renderRecipeDetail(recipeId);
+  }
 }
 
 function openRecipeEditor(recipeId) {
@@ -1658,6 +2158,8 @@ function createCustomRecipeFromForm(event) {
       carbs: formatGrams(formData.get("carbs")),
       protein: formatGrams(formData.get("protein"))
     },
+    rating: normaliseRecipeRating(formData.get("rating")),
+    notes: normaliseRecipeNotes(formData.get("notes")),
     mealprep: recipeMealprepCheckbox.checked,
     steps,
     tags: ["Eigenes Rezept"]
@@ -1703,7 +2205,7 @@ function saveGeneratedRecipeToCookbook() {
   }
 
   const recipeToSave = {
-    ...latestGeneratedRecipe,
+    ...normaliseRecipe(latestGeneratedRecipe),
     id: `custom-${Date.now()}-${slugify(latestGeneratedRecipe.title)}`,
     tags: [...new Set([...(latestGeneratedRecipe.tags || []), "KI-Rezept"])]
   };
@@ -1775,6 +2277,30 @@ function syncRoute() {
   detailSection.classList.add("hidden");
 }
 
+function closePrintPreview() {
+  delete document.body.dataset.previewView;
+}
+
+function openPrintPreview(view) {
+  if (view === "week") {
+    renderPrintWeekView();
+  }
+
+  if (view === "shopping") {
+    renderPrintShoppingView();
+  }
+
+  document.body.dataset.previewView = view;
+  delete document.body.dataset.printView;
+  const previewSection = document.querySelector(view === "week" ? "#print-week-view" : "#print-shopping-view");
+  previewSection?.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function confirmPrint(view) {
+  document.body.dataset.printView = view;
+  window.print();
+}
+
 function renderAll() {
   renderWeekSelect();
   renderShoppingWeekSelect();
@@ -1804,13 +2330,15 @@ copyButton.addEventListener("click", async () => {
 });
 printShoppingButton.addEventListener("click", () => {
   try {
-    renderPrintShoppingView();
-    document.body.dataset.printView = "shopping";
-    window.print();
+    openPrintPreview("shopping");
   } catch (error) {
     copyFeedback.textContent = "Drucken gerade nicht möglich.";
   }
 });
+openProfileButton.addEventListener("click", openProfileModal);
+closeProfileButton.addEventListener("click", closeProfileModal);
+profileForm.addEventListener("submit", saveNutritionGoals);
+resetProfileButton.addEventListener("click", resetNutritionGoals);
 
 weekGrid.addEventListener("click", handleWeekActions);
 weekGrid.addEventListener("change", handleWeekChanges);
@@ -1838,6 +2366,30 @@ detailAddToWeekButton.addEventListener("click", () => {
     addRecipeToDate(recipeId, dateKey, mealKey);
   }
 });
+detailRatingEditor.addEventListener("click", (event) => {
+  const ratingButton = event.target.closest("[data-rating-value]");
+  const recipeId = detailRatingEditor.dataset.recipeId;
+  if (!ratingButton || !recipeId) {
+    return;
+  }
+
+  const nextRating = Number(ratingButton.dataset.ratingValue) || 0;
+  const currentRating = Number(detailRatingEditor.dataset.currentRating) || 0;
+
+  updateRecipeReview(recipeId, {
+    rating: currentRating === nextRating ? 0 : nextRating
+  });
+});
+detailNotesInput.addEventListener("change", () => {
+  const recipeId = detailRatingEditor.dataset.recipeId;
+  if (!recipeId) {
+    return;
+  }
+
+  updateRecipeReview(recipeId, {
+    notes: detailNotesInput.value
+  });
+});
 aiForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   await requestGeneratedRecipe();
@@ -1855,6 +2407,11 @@ plannerModalCloseButton.addEventListener("click", closePlannerModal);
 plannerModal.addEventListener("click", (event) => {
   if (event.target === plannerModal) {
     closePlannerModal();
+  }
+});
+profileModal.addEventListener("click", (event) => {
+  if (event.target === profileModal) {
+    closeProfileModal();
   }
 });
 cookbookSearch.addEventListener("input", renderCookbook);
@@ -1875,10 +2432,12 @@ shoppingWeekSelect.addEventListener("change", (event) => {
   renderShoppingList();
 });
 printWeekButton.addEventListener("click", () => {
-  renderPrintWeekView();
-  document.body.dataset.printView = "week";
-  window.print();
+  openPrintPreview("week");
 });
+printWeekConfirmButton.addEventListener("click", () => confirmPrint("week"));
+printWeekCloseButton.addEventListener("click", closePrintPreview);
+printShoppingConfirmButton.addEventListener("click", () => confirmPrint("shopping"));
+printShoppingCloseButton.addEventListener("click", closePrintPreview);
 window.addEventListener("afterprint", () => {
   delete document.body.dataset.printView;
 });
@@ -1908,11 +2467,19 @@ window.addEventListener("keydown", (event) => {
   if (event.key === "Escape" && !plannerModal.classList.contains("hidden")) {
     closePlannerModal();
   }
+
+  if (event.key === "Escape" && !profileModal.classList.contains("hidden")) {
+    closeProfileModal();
+  }
 });
 
 window.addEventListener("hashchange", syncRoute);
 
-loadState();
-incrementVersionCounter();
-renderAll();
-setAiLoadingState(false);
+async function initApp() {
+  await loadState();
+  incrementVersionCounter();
+  renderAll();
+  setAiLoadingState(false);
+}
+
+initApp();
