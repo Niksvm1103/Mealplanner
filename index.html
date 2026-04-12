@@ -99,6 +99,33 @@
           <div id="print-shopping-body" class="print-shopping-body"></div>
         </section>
 
+        <section id="print-recipe-view" class="print-week-view print-recipe-view" aria-hidden="true">
+          <div class="print-week-header">
+            <h1 id="print-recipe-title"></h1>
+            <p id="print-recipe-meta"></p>
+          </div>
+          <div class="print-preview-actions">
+            <button id="print-recipe-confirm" class="button primary" type="button">
+              Drucken
+            </button>
+            <button id="print-recipe-close" class="button secondary" type="button">
+              Schließen
+            </button>
+          </div>
+          <div class="print-recipe-layout">
+            <article class="detail-main print-recipe-main">
+              <div id="print-recipe-nutrition" class="nutrition-grid"></div>
+              <section id="print-recipe-review" class="recipe-review-panel print-recipe-review hidden"></section>
+              <h3>Zubereitung</h3>
+              <ol id="print-recipe-steps" class="step-list"></ol>
+            </article>
+            <aside class="detail-sidebar print-recipe-sidebar">
+              <h3>Zutaten</h3>
+              <ul id="print-recipe-ingredients" class="ingredient-list"></ul>
+            </aside>
+          </div>
+        </section>
+
         <section id="recipe-form-panel" class="panel hidden">
           <div class="section-heading detail-heading">
             <div>
@@ -227,6 +254,9 @@
               <h2 id="detail-title"></h2>
             </div>
             <div class="detail-actions">
+              <button id="print-recipe-button" class="button secondary" type="button">
+                Rezept drucken
+              </button>
               <button id="edit-recipe-button" class="button secondary" type="button">
                 Rezept bearbeiten
               </button>

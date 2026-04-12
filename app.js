@@ -706,6 +706,7 @@ const shoppingWeekSelect = document.querySelector("#shopping-week-select");
 const copyFeedback = document.querySelector("#copy-feedback");
 const detailSection = document.querySelector("#recipe-detail");
 const backButton = document.querySelector("#back-button");
+const printRecipeButton = document.querySelector("#print-recipe-button");
 const editRecipeButton = document.querySelector("#edit-recipe-button");
 const deleteRecipeButton = document.querySelector("#delete-recipe-button");
 const detailSlotSelect = document.querySelector("#detail-slot-select");
@@ -725,6 +726,14 @@ const printShoppingConfirmButton = document.querySelector("#print-shopping-confi
 const printShoppingCloseButton = document.querySelector("#print-shopping-close");
 const printShoppingRange = document.querySelector("#print-shopping-range");
 const printShoppingBody = document.querySelector("#print-shopping-body");
+const printRecipeConfirmButton = document.querySelector("#print-recipe-confirm");
+const printRecipeCloseButton = document.querySelector("#print-recipe-close");
+const printRecipeTitle = document.querySelector("#print-recipe-title");
+const printRecipeMeta = document.querySelector("#print-recipe-meta");
+const printRecipeNutrition = document.querySelector("#print-recipe-nutrition");
+const printRecipeReview = document.querySelector("#print-recipe-review");
+const printRecipeSteps = document.querySelector("#print-recipe-steps");
+const printRecipeIngredients = document.querySelector("#print-recipe-ingredients");
 const versionCounter = document.querySelector("#version-counter");
 const recipeFormPanel = document.querySelector("#recipe-form-panel");
 const openRecipeFormButton = document.querySelector("#open-recipe-form");
@@ -862,6 +871,55 @@ function renderPrintShoppingView() {
       `
     )
     .join("");
+}
+
+function renderPrintRecipeView(recipeId) {
+  const recipe = recipeMap().get(recipeId);
+  if (!recipe) {
+    return false;
+  }
+
+  printRecipeTitle.textContent = recipe.title;
+  printRecipeMeta.textContent = [recipe.category, recipe.time, recipe.servings].filter(Boolean).join(" · ");
+  printRecipeNutrition.innerHTML = [
+    ["kcal", recipe.nutrition.kcal],
+    ["F", recipe.nutrition.fat],
+    ["KH", recipe.nutrition.carbs],
+    ["P", recipe.nutrition.protein]
+  ]
+    .map(
+      ([label, value]) => `
+        <div class="nutrition-card">
+          <span class="nutrition-label">${label}</span>
+          <span class="nutrition-value">${value}</span>
+        </div>
+      `
+    )
+    .join("");
+  printRecipeIngredients.innerHTML = recipe.ingredients
+    .map((ingredient) => `<li>${ingredient.item}</li>`)
+    .join("");
+  printRecipeSteps.innerHTML = recipe.steps
+    .map((step) => `<li>${step}</li>`)
+    .join("");
+
+  printRecipeReview.replaceChildren();
+  const ratingLine = document.createElement("p");
+  const ratingLabel = document.createElement("strong");
+  ratingLabel.textContent = "Bewertung:";
+  ratingLine.append(ratingLabel, ` ${getRecipeRatingLabel(recipe)}`);
+  printRecipeReview.append(ratingLine);
+
+  if (recipe.notes) {
+    const notesLine = document.createElement("p");
+    const notesLabel = document.createElement("strong");
+    notesLabel.textContent = "Anmerkungen:";
+    notesLine.append(notesLabel, ` ${recipe.notes}`);
+    printRecipeReview.append(notesLine);
+  }
+
+  printRecipeReview.classList.toggle("hidden", !recipe.notes && normaliseRecipeRating(recipe.rating) === 0);
+  return true;
 }
 
 function incrementVersionCounter() {
@@ -1910,6 +1968,7 @@ function renderRecipeDetail(recipeId) {
   editRecipeButton.dataset.recipeId = recipe.id;
   deleteRecipeButton.dataset.recipeId = recipe.id;
   detailAddToWeekButton.dataset.recipeId = recipe.id;
+  printRecipeButton.dataset.recipeId = recipe.id;
 
   detailSection.classList.remove("hidden");
   detailSection.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -2290,9 +2349,18 @@ function openPrintPreview(view) {
     renderPrintShoppingView();
   }
 
+  if (view === "recipe") {
+    const recipeId = printRecipeButton.dataset.recipeId;
+    if (!recipeId || !renderPrintRecipeView(recipeId)) {
+      return;
+    }
+  }
+
   document.body.dataset.previewView = view;
   delete document.body.dataset.printView;
-  const previewSection = document.querySelector(view === "week" ? "#print-week-view" : "#print-shopping-view");
+  const previewSection = document.querySelector(
+    view === "week" ? "#print-week-view" : view === "shopping" ? "#print-shopping-view" : "#print-recipe-view"
+  );
   previewSection?.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
@@ -2438,6 +2506,16 @@ printWeekConfirmButton.addEventListener("click", () => confirmPrint("week"));
 printWeekCloseButton.addEventListener("click", closePrintPreview);
 printShoppingConfirmButton.addEventListener("click", () => confirmPrint("shopping"));
 printShoppingCloseButton.addEventListener("click", closePrintPreview);
+printRecipeConfirmButton.addEventListener("click", () => confirmPrint("recipe"));
+printRecipeCloseButton.addEventListener("click", closePrintPreview);
+printRecipeButton.addEventListener("click", () => {
+  const recipeId = printRecipeButton.dataset.recipeId;
+  if (!recipeId) {
+    return;
+  }
+
+  openPrintPreview("recipe");
+});
 window.addEventListener("afterprint", () => {
   delete document.body.dataset.printView;
 });

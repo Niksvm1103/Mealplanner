@@ -932,7 +932,8 @@ select:focus {
 }
 
 body[data-preview-view="week"] #print-week-view,
-body[data-preview-view="shopping"] #print-shopping-view {
+body[data-preview-view="shopping"] #print-shopping-view,
+body[data-preview-view="recipe"] #print-recipe-view {
   display: block;
   margin-top: 24px;
   padding: 28px 34px 34px;
@@ -974,6 +975,25 @@ body[data-preview-view="shopping"] #print-shopping-view {
   border: 1px solid rgba(87, 55, 38, 0.18);
   border-radius: 12px;
   background: white;
+}
+
+.print-recipe-layout {
+  display: grid;
+  grid-template-columns: 1.3fr 0.8fr;
+  gap: 18px;
+}
+
+.print-recipe-main,
+.print-recipe-sidebar {
+  padding: 22px;
+}
+
+.print-recipe-review {
+  margin-top: 0;
+}
+
+.print-recipe-review p {
+  margin: 0 0 10px;
 }
 
 .print-week-header {
@@ -1311,6 +1331,10 @@ input:focus {
   .nutrition-grid {
     grid-template-columns: 1fr 1fr;
   }
+
+  .print-recipe-layout {
+    grid-template-columns: 1fr;
+  }
 }
 
 @page {
@@ -1328,12 +1352,13 @@ input:focus {
   }
 
   .hero,
-  main > *:not(#print-week-view):not(#print-shopping-view) {
+  main > *:not(#print-week-view):not(#print-shopping-view):not(#print-recipe-view) {
     display: none !important;
   }
 
   #print-week-view,
-  #print-shopping-view {
+  #print-shopping-view,
+  #print-recipe-view {
     display: none;
   }
 
@@ -1348,8 +1373,37 @@ input:focus {
     display: block;
   }
 
+  body[data-print-view="recipe"] #print-recipe-view {
+    display: block;
+  }
+
   .print-preview-actions {
     display: none;
+  }
+
+  body[data-print-view="recipe"] #print-recipe-view {
+    padding: 0;
+    border: 0;
+    box-shadow: none;
+    background: white;
+  }
+
+  body[data-print-view="recipe"] #print-recipe-view .print-recipe-layout {
+    gap: 14mm;
+  }
+
+  body[data-print-view="recipe"] #print-recipe-view .detail-main,
+  body[data-print-view="recipe"] #print-recipe-view .detail-sidebar {
+    padding: 0;
+    border: 0;
+    background: white;
+  }
+
+  body[data-print-view="recipe"] #print-recipe-view .recipe-review-panel {
+    margin: 18px 0;
+    padding: 0;
+    border: 0;
+    background: white;
   }
 
   .page-shell {
